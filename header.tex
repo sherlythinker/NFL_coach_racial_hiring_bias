@@ -1,0 +1,36 @@
+\usepackage{ragged2e}
+\AtBeginDocument{\justifying}
+
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{tocbibind} % Includes the bibliography in the TOC
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=false,    % Disable colored links
+    linktoc=all,         % Applies link to the whole TOC entry
+    pdfborder={0 0 0},   % Removes borders around links
+}
+
+% Running header customization
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\textit{A Statistical Approach to Evaluating Racial Equity in NFL Coach Hires}} % Right-aligned header
+\renewcommand{\headrulewidth}{0pt} % Remove the header line
+
+% Title and Subtitle Formatting
+\usepackage{titling}  % Allows customization of title and subtitle
+\pretitle{\begin{center}\LARGE\bfseries}  % Title formatting
+\posttitle{\end{center}\vskip 0.5em}  % Spacing after title
+\preauthor{\begin{center}\large}  % Author formatting
+\postauthor{\end{center}\vskip 0.5em}  % Spacing after author
+\predate{\begin{center}\large}  % Date formatting
+\postdate{\end{center}\vskip 1.5em}  % Spacing after date
+
+% Adding Subtitle
+\newcommand{\subtitle}[1]{%
+    \posttitle{%
+        \par\end{center}
+        \begin{center}\large\textit{#1}\end{center}
+        \vskip 0.5em}%
+}

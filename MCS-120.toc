@@ -1,0 +1,18 @@
+\contentsline {section}{Contents}{1}{section*.1}%
+\contentsline {section}{Executive Summary}{2}{section*.2}%
+\contentsline {section}{Acknowledgement}{3}{section*.3}%
+\contentsline {section}{Introduction}{3}{section*.4}%
+\contentsline {subsection}{1.1 Related Work}{4}{subsection*.5}%
+\contentsline {subsection}{1.2 Hypotheses and Method}{5}{subsection*.6}%
+\contentsline {section}{Data}{5}{section*.7}%
+\contentsline {subsection}{2.1 Gathering Data}{5}{subsection*.8}%
+\contentsline {subsection}{2.2 Data Cleaning}{6}{subsection*.9}%
+\contentsline {subsection}{2.3 Imputing Racial Data}{8}{subsection*.10}%
+\contentsline {section}{Analysis}{11}{section*.11}%
+\contentsline {subsection}{3.1 Career Longevity is a strong Indicator of Coaching Potential}{11}{subsection*.12}%
+\contentsline {subsection}{3.2 Career Performance metrics are best indicators of Potential for Coaching}{12}{subsection*.13}%
+\contentsline {subsection}{3.3 Racial Biases Exist in Coaching Hiring Practices}{17}{subsection*.14}%
+\contentsline {section}{Discussion}{20}{section*.15}%
+\contentsline {section}{Reference}{22}{section*.16}%
+\contentsline {section}{Appendix}{24}{section*.17}%
+\contentsfinish 

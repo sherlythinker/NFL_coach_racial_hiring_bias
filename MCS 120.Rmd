@@ -1,0 +1,1531 @@
+---
+title: "`r format('WHAT RACE IS LEADERSHIP?')`      A Statistical Approach to Evaluating Racial Equity in NFL Coach Hires"
+author: "Sherlock Langevine"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  tufte::tufte_handout:
+    citation_package: natbib
+    latex_engine: xelatex
+    includes:
+      in_header: header.tex
+    toc: true  # Enable Table of Contents
+bibliography: skeleton.bib
+link-citations: yes
+editor_options:
+  chunk_output_type: inline
+---
+
+# Executive Summary
+
+This research delves into the intricate and persistent issue of racial bias within the National Football League's (NFL) coaching hiring practices, offering a detailed statistical analysis to uncover systemic disparities. By examining the potential of career longevity and performance metrics as predictors of coaching success, this study reveals significant patterns of inequality that extend beyond the sports arena into broader societal contexts.
+
+The study's findings indicate that career longevity, traditionally considered a marker of coaching potential, does not necessarily correlate with success in coaching roles. In fact, the data suggests that players with longer careers might struggle to adapt to the strategic demands of coaching, contrary to what might be expected. Additionally, the analysis highlights the importance of considering implicit biases that may disadvantage minority candidates, affecting their chances of being selected for coaching positions.
+
+Further exploration of the data shows that specific performance metrics, particularly those related to overcoming adversity, such as frequent losses or ties, are unexpectedly strong predictors of coaching potential. This insight suggests that resilience and adaptability, cultivated through challenging experiences on the field, are critical qualities for coaching success.
+
+The research also scrutinizes the effectiveness of the Rooney Rule, a policy introduced in 2003 to increase minority representation in coaching positions. Despite its intentions, the rule has not significantly disrupted the entrenched biases that continue to shape hiring decisions. The study draws on social identity theory and the concept of implicit bias to explain why the predominantly white leadership within the NFL may perpetuate a cycle of homogeneity, further marginalizing minority candidates.
+
+By employing a sophisticated statistical approach, including the use of the `rethnicity` library to estimate racial identity and forward selection regression methods, the study systematically examines the disparities in coaching hires. The results, particularly in relation to racial representation, are stark. The analysis uncovers a pronounced underrepresentation of Black coaches and an overrepresentation of white coaches, as vividly illustrated through various figures and tables in the study.
+
+This research not only contributes to the ongoing conversation about racial equity in the NFL but also provides broader implications for addressing systemic discrimination in other fields. The findings underscore the need for more robust interventions that go beyond surface-level policy changes, advocating for a comprehensive approach that addresses both conscious and unconscious biases.
+
+Overall, this study offers a critical examination of the factors influencing coaching hires in the NFL, challenging existing assumptions and highlighting the systemic barriers that continue to prevent true equity. By drawing on interdisciplinary insights from psychology, sociology, and economics, it lays the groundwork for future research and policy development aimed at achieving racial equity not only in sports but across all sectors of society.
+
+```{r setup, include=FALSE}
+library(tufte)
+library(tidyr)
+library(plyr)
+library(dplyr)
+library(rethnicity)
+library(ggplot2)
+library(stringr)
+library(tinytex)
+library(rethnicity)
+library(stats)
+library(readr)
+library(broom)
+
+# Install reticulate if it's not already installed
+if (!requireNamespace("reticulate", quietly = TRUE))
+  install.packages("reticulate")
+if (!requireNamespace("plotly", quietly = TRUE))
+  install.packages("plotly")
+if (!requireNamespace("car", quietly = TRUE))
+  install.packages("car")
+if (!requireNamespace("glmnet", quietly = TRUE))
+  install.packages("glmnet")
+if (!requireNamespace("boot", quietly = TRUE))
+  install.packages("boot")
+if(!requireNamespace("zoo", quietly = TRUE))
+  install.packages("zoo")
+if(!requireNamespace("knitr", quietly = TRUE))
+  install.packages("knitr")
+if(!requireNamespace("kableExtra", quietly = TRUE))
+  install.packages("kableExtra")
+if(!requireNamespace("magick", quietly = TRUE))
+  install.packages("magick")
+if(!requireNamespace("imager", quietly = TRUE))
+  install.packages("imager")
+# Load the reticulate package
+library(reticulate)
+library(plotly)
+library(car)
+library(glmnet)
+library(boot)
+library(zoo)
+library(knitr)
+library(kableExtra)
+library(imager)
+library(magick)
+
+
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
+options(htmltools.dir.version = FALSE)
+```
+
+# Acknowledgement
+
+A few weeks before this project was due, a close friend reminded me of the old adage: "It takes a village." As I sit here, reflecting on the journey that brought this paper to life, I realize just how true those words are.
+
+First and foremost, I am deeply grateful to God for providing me with the strength, clarity, and perseverance needed to complete this project. Through every challenge and triumph, His guidance has been my unwavering source of comfort and inspiration.
+
+I extend my deepest gratitude to Professor Chiara Sabatti, whose wisdom and unwavering belief in my potential served as the backbone of this research. Your guidance in navigating the complexities of statistical approaches has been invaluable, and I will forever cherish the moments when your constructive critiques pushed me to think deeper and work harder.
+
+To Joonhyuk Lee, my teaching assistant and statistical advisor, your expertise and patience have been nothing short of extraordinary. Whether it was a last-minute question or a lengthy discussion about the finer points of data interpretation, you were always there, offering insights that sharpened my analytical skills and enriched the quality of this work.
+
+Emily Flynn, my research expert from the Data Science CoLab at UCSF, you have been the lighthouse in the fog of data. Your ability to distill complex concepts into understandable ideas made the daunting task of data analysis not only manageable but truly enjoyable. Your dedication to the field of data science has inspired me to push the boundaries of my own work, and for that, I am profoundly grateful.
+
+This project would not have been possible without the support of these incredible individuals, and I am deeply thankful for their contributions. The late nights, the countless revisions, and the moments of doubt were all made easier knowing I had a team of such remarkable mentors by my side. To all of you, this work is as much yours as it is mine.
+
+# Introduction
+
+`r newthought('It is widely recognized that diversity ')`in the leadership of sports organizations not only signifies a commitment to inclusive values but also enriches decision-making processes by incorporating a variety of perspectives. This diversity is crucial for driving innovation and effectively addressing the multifaceted needs of diverse players, staff, and fans. The Positive Coaching Alliance highlights the benefits within the sports context, stating, "Diverse coaching work-forces help coaches & athletes develop empathy and understanding of different cultures, foster a sense of belonging, and create an environment where everyone feels respected."[^1] However, the path to achieving diversity in leadership roles is fraught with challenges, often stemming from persistent biases—both conscious and unconscious—that shape hiring practices. Beyond the context of sports, these biases may manifest as preferences for candidates who resemble current leaders or through more subtle means such as culturally biased assessment criteria, which can unintentionally favor certain groups.
+
+[^1]: [The Positive Coaching Alliance](https://positivecoach.org/) is an American non-profit organization which strives to create pathways for youth sports organizations, schools, and communities to realize sports full potential and benefits for youth and their statement emphasizes the significance of diversity in sports coaching and their \> 40 year history of success reflects how diverse experiences and backgrounds contribute to addressing the needs of all stakeholders.
+
+## 1.1 Related Work
+
+`r newthought('Previous research and statistical analyses,')` such as [“Racial Disparity in Leadership: Evidence of Valuative Bias in the Promotions of National Football League Coaches,”](https://www.journals.uchicago.edu/doi/10.1086/725389) and articles from [The Washington Post](https://www.washingtonpost.com/sports/interactive/2022/nfl-black-head-coaches/) and [USA Today](https://www.usatoday.com/story/opinion/2022/10/14/nfl-coaches-report-shows-football-league-diversity-problem/10484940002/), have predominantly described the racial differences between teams and their coaches. These studies suggest that factors beyond race, like a player's NFL career performance, might influence hiring decisions. My approach seeks to identify the top NFL players who are not currently coaches, but whose performance indicates their potential to maximize coaching outcomes should they be hired as coaches.
+
+To address systemic racial biases in coaching hires, the NFL implemented the [Rooney Rule](https://en.wikipedia.org/wiki/Rooney_Rule) in 2003. Named after Dan Rooney, the former owner of the Pittsburgh Steelers and former chairman of the league's diversity committee, the Rooney Rule requires NFL teams to interview at least one minority candidate for head coaching and senior football operation jobs. This rule was established to ensure that minority coaches are considered more systematically for top coaching opportunities, promoting greater equality and diversity within the NFL's leadership ranks.
+
+Despite its implementation, challenges remain in achieving significant change in the NFL hiring practices, as evidenced by ongoing discussions in the media and academic studies examining its effectiveness and calling for enhanced measures. For instance, pages like 'Our Black Excellence' have highlighted that while nearly [60% of players](https://www.ourblackexperience.com/first-black-players-in-the-nfl) in the NFL are Black, there is a significant drop in their representation when it comes to coaching positions. This discrepancy may highlight potential biases in hiring practices and suggests a need for deeper investigation into the barriers that hinder equitable representation in NFL leadership roles. Therefore, this research aims to explore the discrepancy further using an outcome test.
+
+## 1.2 Hypotheses and Method
+
+-   Career Longevity as a Strong Indicator of Coaching Success: Our first hypothesis posits that players with extensive careers in the NFL are likely to excel in coaching roles. `r margin_note("This hypothesis underpins our analytical framework, aiming to discern pivotal attributes that predict successful coaching.")` It suggests that a prolonged playing career reflects not only a deep understanding of the game but also the development of crucial leadership qualities necessary for effective coaching. This hypothesis will guide our investigation into whether sustained engagement in professional football endows players with the skills essential for thriving as coaches.
+
+-   Career Performance are best indicators of Potential for Coaching: Our second hypothesis focuses on how players can assess their potential to become NFL coaches by evaluating their performance during their playing careers.`r margin_note("Developing a predictive framework based on performance factors will help identify players likely to excel in coaching roles.")` This hypothesis is grounded in the belief that on-field success and an in-depth understanding of the game are critical indicators of the skills needed for effective coaching. By analyzing various performance-related factors such as the number of punting blocks executed, the number of touchdowns, and any other performance metrics collected based on the position played by a player in their team, we aim to develop a predictive framework that identifies players who are likely to succeed as coaches after their playing days are over.
+
+-   Racial Biases exist in Coaching Hiring Practices: Finally, the third hypothesis addresses a critical disparity in the NFL's hiring processes. `r margin_note("Analyzing racial disparities in hiring practices will illuminate systemic biases within the NFL's coaching recruitment.")` It is hypothesized that the racial composition of players deemed qualified to be coaches by the predictive model will not correspond to the racial composition of those actually hired as coaches. This hypothesis, focused on uncovering representational gaps, will involve analyzing trends over time to assess whether there has been progress or regression in the racial diversity of NFL coaching hires. Through this examination, the broader systemic biases that may pervade professional sports hiring practices will be brought to light.
+
+# Data
+
+## 2.1 Gathering Data
+
+`r newthought('The foundation of this research')` will be comprehensive data collection. The initial plan was to scrape data from [Pro Football Reference](https://www.pro-football-reference.com), a reputable source for football statistics and historical records, or by securing access to the database maintained by Historian Gary Gillette[^2], whose collection includes updated racial and biographical information on every NFL player in history, invaluable for the accuracy and depth of our analysis.
+
+[^2]: Gillette maintains unique historical Race/Ethnicity Databases for players, managers, and umpires in Major League Baseball and for players and head coaches in Pro Football, Pro Basketball, and Hockey. These special databases are often licensed to academics engaged in groundbreaking studies, including the ongoing Harvard University’s Football Players Health Study and the continuing acclaimed work of Boston University’s CTE Center.
+
+After attempting both to develop a new scraping algorithm for the Pro Football Reference website and to contact Gary Gillette, neither method proved sufficient in retrieving a viable dataset. An exploration of whether anyone had previously scraped this data from Sports Reference led to the discovery of Zack Thoutt's [scraper code](https://github.com/zackthoutt/nfl-player-stats) on GitHub. However, upon attempting to use his code to scrape the Pro Football Reference site again, it became clear that the nearly six-year-old code was unable to handle the website's updated protocol. Fortunately, Thoutt had previously scraped the site and posted a JSON file containing data retrieved from Pro Football Reference up to December 4th, 2017, on his [Kaggle](https://www.kaggle.com/datasets/zynicide/nfl-football-player-stats?select=profiles_1512362725.022629.json) account.
+
+The JSON files were extremely large and not well-suited for analysis in R, so they were converted to CSVs, which are smaller and easier to analyze. While converting JSON files to CSVs is typically a straightforward process, the challenge arose with these particularly large files that couldn't be uploaded to Google Colab due to their size. As a solution, a custom Python script was written and executed in the terminal to convert the large JSON files into two CSVs.`r margin_note("One containing a profile of each player and another with information on every game that each player played during their career.")`
+
+The dataset containing profiles of each player is crucial because it provides the names and biographical information linked to each player's ID. This linkage is essential for correlating the performance data in the games dataset with the corresponding player. The games dataset offers a detailed record of every game played in the NFL, including the performance of each player in those games. While this dataset may be too dense to derive immediate insights, it becomes invaluable for summarizing the overall performance of each player. In our analysis, specific combinations of these two datasets will be used to test our hypotheses.
+
+Data on all the hired NFL coaches was relatively easy to retrieve since it was readily available on a table on the [Pro Football Reference website](https://www.pro-football-reference.com/coaches/) as of April 13th, 2024. Subject to their terms of use, the coaches' data was copied directly and then converted into a CSV using a [Google Colab](https://colab.research.google.com/drive/1F8diVdmyrXovuLej9pbGC6148esGzEVz?usp=sharing) notebook.
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE }
+# loading data
+coaches_df<-read.csv("coaches.csv", header = TRUE)
+players_df<-read.csv("players.csv", header = TRUE)
+games_df<-read.csv("games.csv", header = TRUE)
+```
+
+## 2.2 Data Cleaning
+
+`r newthought('In this study')`, three key datasets were accessed: coaches_df, players_df, and games_df. The objective was to extract each player's name, likely racial identity, performance metrics, whether they transitioned into NFL coaching roles, and the coaching performance of those who did. Upon examining the data, several variables were identified as either irrelevant or overly detailed for the research purposes. For example, the players_df dataset included variables like the players' high school and college backgrounds, which did not pertain to this study. Similarly, the games_df dataset contained granular details on individual game performances throughout NFL history, which initially seemed impractical for direct analysis.
+
+However, this level of detail proved beneficial when restructuring the datasets. It allowed for effective aggregation and summarization of career performance metrics, which was crucial for training the predictive model. This approach enabled the inclusion of common covariates necessary for a robust analysis, thereby enhancing the predictive accuracy of the model regarding coaching potential based on past playing performance.
+
+The initial step involved creating consistent variables across the players_df and coaches_df. To achieve this, the games_df was grouped by player_id, and key statistics for each player were extracted, such as the total number of games played, won, lost, and tied, along with the years marking the start and end of their careers and the total duration of their playing years. After compiling this data, the summarized games data was merged with the players_df to form a comprehensive dataset that integrates both player and game statistics. This process facilitated a more structured analysis, enabling a more accurate assessment of coaching potential.
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+# Grouping by player_id
+games_summary <- games_df %>% filter(!is.na(year)) %>%
+  group_by(player_id) %>%
+  summarise(
+    player_N = n(),                                      # Number of games this player played
+    player_W = sum(player_team_score > opponent_score),  # Count of wins
+    player_win_rate = player_W / player_N,
+    player_L = sum(player_team_score < opponent_score),  # Count of losses
+    player_loss_rate = player_L / player_N,
+    player_T = sum(player_team_score == opponent_score),  # Count of ties
+    player_tie_rate = player_T / player_N,
+    player_From = min(year),  # Minimum year, saving it under 'From'
+    player_To = max(year),    # Maximum year, saving it under 'To'
+    player_Yrs = player_To - player_From,    # Calculating the total number of years played
+    across(c(passing_attempts:punting_blocked, punt_return_attempts:punting_blocked), sum, .names = "sum_{.col}")
+  )
+```
+
+```{r, include = FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+players_games_left <- left_join(players_df, games_summary,  by = "player_id")
+
+# View the combined data
+head(players_games_left)
+```
+
+Next, the coaches_df was refined upon noticing that some names included an extraneous '+' suffix. This character was removed to ensure consistency across the dataset. Subsequently, this cleaned dataframe was merged with the previously integrated dataset of games and player data.
+
+In preparation for deeper analysis, particularly for predicting future coaching success based on historical data, a scoring metric was introduced to effectively encapsulate a coach's success. This score is calculated using the following formula, which incorporates Laplace smoothing:
+
+$$\text{score} = \frac{W + \frac{T}{2} + 1}{N + 2}$$
+
+where:
+
+-   $W$ is the number of wins,
+
+-   $T$ is the number of ties,
+
+-   $L$ is the number of losses, and
+
+-   $N$ is the total number of games, calculated as $N = W + T + L$.
+
+Laplace smoothing was implemented in the scoring formula to mitigate issues arising from coaches who may have zero wins or losses, which could potentially skew their effectiveness rating. By adding 1 to the numerator and 2 to the denominator, this adjustment simulates a baseline level of performance, thus smoothing out fluctuations caused by small sample sizes. This method ensures that no coach's score is unduly influenced by having too few games, making the metric more robust and reliable. Additionally, these coaching potential scores were transformed into logits, preparing them for use in logistic regression models for subsequent analysis.
+
+$$
+\text{score logits} = \log\left(\frac{\text{score}}{1 - \text{score}}\right)
+$$
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+logit = function(p) log(p/(1-p))
+
+# Cleaning '+' from the end of names in the coaches_df
+coaches_df <- coaches_df %>%
+  mutate(
+    name = str_remove(Coach, "\\+$"),
+    firstname = word(name, 1),       # Extracts the first word from the 'name' column
+    lastname = word(name, 2),        # Extracts the last word from the 'name' column
+    N = W + T + L,                   # Reset the count of games to fix some bad data
+    score = (W + T/2 + 1) / (N + 2), # Generate a score for each coach to train on later laplace smoothing
+    score_logits = logit(score)
+  ) %>%
+  dplyr::select(-Coach)
+
+# Correct any possible mistakes in variable names and ensure proper data types
+players_df <- players_df %>%
+  mutate(
+    Draft_Year = as.numeric(as.character(draft_year)),
+    height = as.numeric(word(chartr("-", " ", height), 1)) * 12 +
+      as.numeric(word(chartr("-", " ", height), 2))
+  )
+
+# Performing a left join
+players_games_coach_temp <- left_join(left_join(players_df %>% mutate(is_player = TRUE), games_summary,  by = "player_id"), coaches_df %>% mutate(is_coach = TRUE), by = c("name" = "name"))
+
+players_games_coach <- players_games_coach_temp %>%
+  dplyr::select( -hof_induction_year, -Rk, -W.L..1, -G.plyf, -W.plyf, -L.plyf, -SBwl, -Conf, -G....500, -Yr.plyf) %>%
+  mutate(
+    firstname = word(name, 1),     # Extracts the first word from the 'name' column
+    lastname = word(name, 2)      # Extracts the last word from the 'name' column
+  )
+```
+
+A column was needed to identify which players transitioned into coaching roles. To achieve this, the names in the combined dataframe were compared with those in coaches_df, and the is_Coach column was created.
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+#adding 'Is_Coach' column
+players_games_coach <- players_games_coach %>%
+  mutate(is_Coach = name %in% coaches_df$Coach)
+```
+
+## 2.3 Imputing Racial Data
+
+Finally, the last set of data needed was the possible race of players. Since racial data for each player was not explicitly available, it was estimated using the `rethnicity` library. This package allows for the imputation of racial features based on names—a method that, while not flawless, provides a probabilistic assessment of racial distribution over time. The data was first split into first and last names, and then the functions provided by the `rethnicity` package were applied to impute these racial features.
+
+It is crucial to acknowledge the ethical implications of assigning racial attributes based solely on names. As pointed out by Professor Chiara Sabatti, race and ethnicity are complex constructs that individuals identify with based on a myriad of personal, cultural, and societal factors. Using name-based predictions involves making inferences that may not align with how individuals self-identify, raising important questions about consent and the appropriateness of such an approach in research.
+
+To mitigate these concerns, several measures have been adopted to ensure that this process remains academically sound and ethically responsible:
+
+1.  **Probabilistic and Aggregate Analysis:** The primary aim of using the `rethnicity` package is not to assign race to individuals but rather to identify broader trends in racial distribution across a population. This distinction is important as it shifts the focus from individual identification to understanding population-level trends, thereby reducing the ethical risks associated with misclassification.
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+# Performing a left join
+players_games_coach <- full_join(full_join(players_df %>% mutate(is_player = TRUE), games_summary,  by = "player_id"), coaches_df %>% mutate(is_coach = TRUE), by = c("name" = "name"))
+
+players_games_coach <- players_games_coach %>%
+  dplyr::select( -hof_induction_year, -Rk, -W.L..1, -G.plyf, -W.plyf, -L.plyf, -SBwl, -Conf, -G....500, -Yr.plyf) %>%
+  mutate(
+    firstname = word(name, 1),     # Extracts the first word from the 'name' column
+    lastname = word(name, 2)      # Extracts the last word from the 'name' column
+  )
+
+head(players_games_coach)
+sort(names(players_games_coach))
+```
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+# Predicting ethnicity
+ethnicity_predictions <- predict_ethnicity(players_games_coach$firstname, players_games_coach$lastname)
+players_games_coach<- merge(players_games_coach, ethnicity_predictions, by = c("firstname", "lastname"))
+
+players_games_coach <- players_games_coach%>%
+  rowwise() %>%
+  mutate(race = case_when(
+    prob_black >= max(prob_hispanic, prob_white) ~ "black",
+    prob_hispanic >= max(prob_black, prob_white) ~ "hispanic",
+    prob_white >= max(prob_black, prob_hispanic) ~ "white",
+    TRUE ~ race  # fallback, should not be needed unless all probabilities are equal
+  )) %>%
+  ungroup() # Ensures further operations are not performed rowwise
+```
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+#Filter coaches who were not players from set. 
+players_games_coach <- players_games_coach %>%
+  mutate(draft_year = coalesce(Draft_Year, player_From)) %>%
+  filter(!is.na(player_From) & !is.na(draft_year))
+
+```
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+# Assuming players_games_coach has columns named From, To, and Race
+
+# Create the initial data frame for annual_race_distribution
+annual_race_distribution <- data.frame(Year = integer(), black = integer(), white = integer(), hispanic = integer())
+
+# Iterate through each row in players_games_coach
+for (i in 1:nrow(players_games_coach)) {
+  if (!is.na(players_games_coach$player_From[i]) & !is.na(players_games_coach$player_To[i])) {
+    years <- players_games_coach$player_From[i]:players_games_coach$player_To[i]
+    for (year in years) {
+      if (year %in% annual_race_distribution$Year) {
+        # If year exists, increment the appropriate race column
+        index <- which(annual_race_distribution$Year == year)
+        race_column <- which(names(annual_race_distribution) == players_games_coach$race[i])
+        annual_race_distribution[index, race_column] <- annual_race_distribution[index, race_column] + 1
+      } else {
+        # If year does not exist, add a new row
+        new_row <- data.frame(Year = year, black = 0, white = 0, hispanic = 0)
+        new_row[1, players_games_coach$race[i]] <- 1
+        annual_race_distribution <- rbind(annual_race_distribution, new_row)
+      }
+    }
+  }
+}
+
+# Ordering the rows by year for better readability
+annual_race_distribution <- annual_race_distribution[order(annual_race_distribution$Year),]
+```
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+annual_race_distribution <- annual_race_distribution %>%
+  mutate(total = black + white + hispanic)
+
+# Calculate proportions for each race category
+annual_race_distribution <- annual_race_distribution %>%
+  mutate(
+    prop_latino = hispanic / total,
+    prop_black = black / total,
+    prop_white = white / total,
+    
+  )%>%
+  dplyr::select(c(-black, -white, -hispanic, -total))  # Corrected to properly remove columns
+
+# Display the first few rows of the updated dataframe
+head(annual_race_distribution)
+
+```
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+# Load your data into a DataFrame called data
+data_selected <- annual_race_distribution %>% dplyr::select(c(Year, prop_black, prop_white, prop_latino))
+
+# Use pivot_longer to transform the data
+long_data <- annual_race_distribution %>% 
+  pivot_longer(cols = -Year, names_to = "Race", values_to = "Proportion",
+               names_prefix = "prop_") %>%
+  mutate(Race = case_when(
+    Race == "latino" ~ "Latino",
+    Race == "black" ~ "Black",
+    Race == "white" ~ "White",
+    TRUE ~ Race
+  ))
+
+# View the transformed data
+filtered_data <- long_data %>%
+  filter(Year >= 1960 & Year <= 2017)
+```
+
+```{r Figure1, fig.cap = "This bar chart visualizes the racial composition of the NFL from 1960 to 2017, illustrating the yearly proportions of Latino, Black, and White players and highlighting significant demographic trends and shifts throughout the period.", cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4}
+filtered_data$Race <- factor(filtered_data$Race, levels = c("Latino", "Black", "White"))
+
+# Now create the plot with the reordered factor levels
+ggplot(filtered_data) +
+  geom_bar(aes(x = Year, y = Proportion, fill = Race), position = "stack", stat = "identity") +
+  scale_fill_manual(values = c("Black" = "mediumorchid4", "White" = "coral2", "Latino" = "skyblue")) +
+  #theme_minimal() +
+  labs(x = "Year", y = "Proportion", title = "Racial Composition of the NFL up to 2017", fill = "Race")
+```
+
+```{r Figure2, fig.margin=FALSE,  out.width='100%', fig.cap="Harvard NFL Race Distribution", cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+knitr::include_graphics("/Users/sherlythinker/Downloads/MCS120/Percentage-of-pro-fb-players-by-re60-00.webp")
+```
+
+2.  **Model Validation and Comparison:** To ensure the reliability of the imputed data, the results generated by the `rethnicity` model were compared with the findings from the [Harvard study](https://footballplayershealth.harvard.edu/about/news/examining-race-trends-in-the-nfl-diversity-but-not-inclusion/) on race trends in the NFL (Football Players Health Study at Harvard, 2023). *Figure 1* in the analysis shows that while the model tends to over-predict Black individuals in earlier years, it closely aligns with the overall racial distribution trends observed in the Harvard study between 1960 and 2017 in *Figure 2*. This comparison validates the model's ability to capture latent trends, which is vital for the probabilistic assessment of race.
+
+3.  **Ethical Usage Guidelines:** Strict adherence to the ethical guidelines set forth by the author of the `rethnicity` package is maintained. These guidelines stipulate that the package should be used exclusively for academic research, with no disclosure of predicted ethnic groups at the individual level, and that the information should not be used to discriminate or study individuals, but rather to study populations in the aggregate. By following these guidelines, the research remains focused on identifying systemic trends and disparities, rather than making potentially harmful individual-level inferences.
+
+```{r}
+# Load the image using the magick package
+image_path <- "/Users/sherlythinker/Downloads/MCS120/coloured_percentage_nfl_race copy.png"
+image <- image_read(image_path)
+
+# Convert to an imager object to process the image
+image_cimg <- magick2cimg(image)
+
+# Get the dimensions of the image
+dim(image_cimg)
+
+# Convert the image to HSV color space for easier segmentation
+image_hsv <- RGBtoHSV(image_cimg)
+
+# Define color ranges for each race (Latino: Blue, Black: Purple, White: Orange)
+# Create masks for each color based on their HSV ranges
+
+# For Blue (Latino)
+mask_blue <- (image_hsv[,,1] >= 0.5 & image_hsv[,,1] <= 0.7) & (image_hsv[,,2] >= 0.4)
+
+# For Purple (Black)
+mask_purple <- (image_hsv[,,1] >= 0.7 & image_hsv[,,1] <= 0.85) & (image_hsv[,,2] >= 0.4)
+
+# For Orange (White)
+mask_orange <- (image_hsv[,,1] >= 0.05 & image_hsv[,,1] <= 0.15) & (image_hsv[,,2] >= 0.4)
+
+# Combine the masks and convert to a dataframe for analysis
+image_data <- data.frame(
+  blue = as.numeric(mask_blue),
+  purple = as.numeric(mask_purple),
+  orange = as.numeric(mask_orange)
+)
+
+# Calculate the width of each bar (58 bars)
+image_width <- dim(image_cimg)[2]
+bar_width <- floor(image_width / 58)
+
+# Initialize lists for proportions
+proportions_by_year_blue <- c()
+proportions_by_year_purple <- c()
+proportions_by_year_orange <- c()
+
+# Loop through each of the 58 bars (each year)
+for (i in 1:58) {
+  # Get the start and end columns for the current bar
+  start_col <- (i - 1) * bar_width + 1
+  end_col <- i * bar_width
+  
+  # Extract the bar slice for each color mask
+  blue_bar <- image_data$blue[start_col:end_col]
+  purple_bar <- image_data$purple[start_col:end_col]
+  orange_bar <- image_data$orange[start_col:end_col]
+  
+  # Calculate the total pixels in the bar
+  total_pixels_bar <- sum(blue_bar, purple_bar, orange_bar)
+  
+  # Calculate the proportion for each color within the current bar
+  if (total_pixels_bar > 0) {
+    proportions_by_year_blue[i] <- sum(blue_bar) / total_pixels_bar
+    proportions_by_year_purple[i] <- sum(purple_bar) / total_pixels_bar
+    proportions_by_year_orange[i] <- sum(orange_bar) / total_pixels_bar
+  } else {
+    proportions_by_year_blue[i] <- 0
+    proportions_by_year_purple[i] <- 0
+    proportions_by_year_orange[i] <- 0
+  }
+}
+
+# Create a dataframe with the results
+years_updated <- 1960:2017
+
+df_race_proportions_by_year <- data.frame(
+  Year = rep(years_updated, 3),
+  Race = rep(c("Latino", "Black", "White"), each = 58),
+  Proportion = c(proportions_by_year_blue, proportions_by_year_purple, proportions_by_year_orange)
+)
+
+# Print the result
+#print(df_race_proportions_by_year)
+
+# Save the dataframe as a CSV file
+#write.csv(df_race_proportions_by_year, "race_proportions_by_year.csv", row.names = FALSE)
+
+# Visualize the segmentation masks
+par(mfrow = c(1, 3))
+plot(as.cimg(mask_blue), main = "Latino (Blue) Segmentation")
+plot(as.cimg(mask_purple), main = "Black (Purple) Segmentation")
+plot(as.cimg(mask_orange), main = "White (Orange) Segmentation")
+
+```
+
+4.  **Transparency and Caution in Interpretation:** It is recognized that the method cannot achieve 100% accuracy and that there is a risk of misclassification. Therefore, a cautious approach has been taken in interpreting the results, emphasizing that these predictions are not definitive, as shown in *Figure 3*. Instead, they serve as one of several tools to explore racial dynamics within the dataset. The findings from this analysis are presented with transparency about the limitations of the model, ensuring that conclusions are drawn with an understanding of the potential inaccuracies.
+
+```{r,  out.width='100%', fig.cap="Table showing accuracy of Predictions from Rethnicity Package", cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+knitr::include_graphics("/Users/sherlythinker/Downloads/MCS120/Screenshot.png")
+```
+
+In conclusion, while the use of name-based ethnicity prediction models raises important ethical considerations, these concerns can be mitigated through careful methodological design, rigorous validation against external studies, adherence to ethical guidelines, and transparent interpretation of results. The insights gained from this approach, despite its limitations, are critical for understanding racial trends over time, which is a key component of the broader analysis conducted in this research.
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+# Correct any possible mistakes in variable names and ensure proper data types
+players_games_coach$draft_year <- as.numeric(as.character(players_games_coach$draft_year))
+players_games_coach$Yrs <- as.numeric(as.character(players_games_coach$Yrs))
+
+# Calculate the average number of years spent in the NFL by draft year and race
+avg_years_by_draft_year <- players_games_coach %>% # Exclude rows where Draft_Year is NA before grouping
+  group_by(player_From, race) %>%
+  summarise(Average_Years = mean(player_Yrs, na.rm = TRUE), .groups = 'drop')  # Drop grouping after summarization
+```
+
+# Analysis
+
+## 3.1 Career Longevity is a strong Indicator of Coaching Potential
+
+`r newthought('In addressing our initial hypotheses')`, this analysis seeks to determine if the duration of players' careers in the NFL serves as a reliable predictor of their success as coaches. The plot in *Figure 4*, "Average NFL Career Duration over the Years," `r margin_note("We excluded those who are still playing in the NFL since that data can skew results.")` illustrates the distribution of career lengths by draft year and race. It is hypothesized that a longer career may indicate a deeper understanding of the game and better-developed leadership skills, qualities that could potentially translate into more effective coaching. The slight variation observed in career duration among different racial groups also prompts further exploration into how these differences might affect transitions into coaching roles. However, the duration seems generally consistent given the small observed gradient of the regression line. By understanding these patterns of career duration, it may be possible to identify if the length of a player's career can reliably forecast their coaching capabilities, thereby providing a valuable metric for evaluating potential coaching talent.
+
+```{r Figure3, fig.cap="This scatter plot displays the average career lengths of NFL players, categorized by race, from 1950 to recent years. Each dot represents the average career duration of players drafted in a particular year, color-coded by race—black, Hispanic, and white. The trend line highlights the general trend in career lengths over time, providing insights into how race and draft year may influence career longevity in the NFL.", fig.margin = TRUE, cache=TRUE, message=FALSE, echo=FALSE, warning=FALSE, fig.width=5, fig.height=3}
+filtered_data1 <- avg_years_by_draft_year %>%
+  filter(player_From < 2012)
+
+# Plot the data
+ggplot(filtered_data1, aes(x = player_From , y = Average_Years)) +
+  geom_point(aes(color = race), size = 2, shape = 20, alpha = 1) +
+  geom_smooth(se = FALSE, method = lm, formula = y ~ x, color = "black", size = 0.5) +  # Connect points with a line
+  scale_x_continuous(breaks = seq(min(avg_years_by_draft_year$player_From, na.rm = TRUE), 
+                                  max(avg_years_by_draft_year$player_From, na.rm = TRUE), by = 10)) +
+  labs(title = "Average NFL Career Duration over the Years",
+       x = "Draft Year",
+       y = "Average Years in NFL",
+       color = "Race") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
+        plot.title = element_text(hjust = 0.5)) +
+  scale_color_manual(values = c("black" = "mediumorchid4", 
+                                "white" = "coral2", 
+                                "hispanic" = "skyblue"))
+```
+
+In evaluating this hypothesis further, the first step was to check the Z-scores for the variable `player_Yrs`. A Z-score is a statistical measurement that describes a value's relationship to the mean of a group of values, measured in terms of standard deviations. This approach provides insight into whether the variable `player_Yrs` is a significant predictor of a player's coaching potential.
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+library(dplyr)
+
+# Assuming players_games_coach is your full dataset
+# Filter the data first if needed
+players_games_coach <- players_games_coach %>% 
+  filter(is_player & is_coach)
+
+# Now split the data
+set.seed(123)  # Set a seed for reproducibility
+# Sample 50% of the data randomly for training
+CoachTrain_df <- players_games_coach %>% 
+  sample_frac(.5)
+
+# Use anti_join to get the rest of the data for testing
+CoachTest_df <- anti_join(players_games_coach, CoachTrain_df, by = names(players_games_coach))
+
+# Check the structure to ensure the split
+str(CoachTrain_df)
+str(CoachTest_df)
+```
+
+```{r, include = FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+variables <- c('player_L', 'player_loss_rate', 'player_N', 'player_T', 'player_tie_rate',
+               'factor(player_To)', 'player_W', 'player_win_rate', 'player_Yrs', 'position',
+               'sum_defense_interception_touchdowns',
+               'sum_defense_interception_yards', 'sum_defense_interceptions', 'sum_defense_sacks',
+               'sum_defense_safeties', 'sum_defense_tackle_assists', 'sum_defense_tackles',
+               'sum_field_goal_attempts', 'sum_field_goal_makes', 'sum_kick_return_attempts',
+               'sum_kick_return_touchdowns', 'sum_kick_return_yards', 'sum_passing_attempts',
+               'sum_passing_completions', 'sum_passing_interceptions', 'sum_passing_rating',
+               'sum_passing_sacks', 'sum_passing_sacks_yards_lost', 'sum_passing_touchdowns',
+               'sum_passing_yards', 'sum_point_after_attemps', 'sum_point_after_makes',
+               'sum_punt_return_attempts', 'sum_punt_return_touchdowns', 'sum_punt_return_yards',
+               'sum_punting_attempts', 'sum_punting_blocked', 'sum_punting_yards',
+               'sum_receiving_receptions', 'sum_receiving_targets', 'sum_receiving_touchdowns',
+               'sum_receiving_yards', 'sum_rushing_attempts', 'sum_rushing_touchdowns',
+               'sum_rushing_yards')
+
+# Create an empty data frame to store results
+results <- data.frame(Variable = character(), Z_Score = numeric(), stringsAsFactors = FALSE)
+
+# Loop through each variable and fit a linear model
+for (var in variables) {
+  # Check if the variable actually exists in the dataframe to avoid errors
+  if (var %in% names(CoachTrain_df)) {
+    # Construct the formula string
+    formula_str <- paste("score_logits ~", var)
+
+    # Fit the linear model
+    coach_model_test <- lm(formula_str, data = CoachTrain_df)
+
+    # Calculate the z-score
+    # Check if the variable has a coefficient in the model summary (i.e., was included in the model)
+    if (var %in% rownames(summary(coach_model_test)$coefficients)) {
+      z_score <- summary(coach_model_test)$coefficients[var, "Estimate"] /
+                 summary(coach_model_test)$coefficients[var, "Std. Error"]
+    } else {
+      z_score <- NA  # Assign NA if the variable was not included or model failed
+    }
+
+    # Append results to the data frame
+    results <- rbind(results, data.frame(Variable = var, Z_Score = z_score))
+  } else {
+    results <- rbind(results, data.frame(Variable = var, Z_Score = NA))  # NA for non-existent variables
+  }
+}
+```
+
+```{r, include=FALSE, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+results_clean <- results[!is.na(results$Z_Score), ]
+```
+
+```{r Figure4, fig.cap = "Bar graph of the Z-score of perfomance variables in grey and the player years variable in red.", fig.margin = TRUE, cache=TRUE, message=FALSE, echo=FALSE,warning=FALSE, fig.width=5, fig.height=4}
+# Create a new column to distinguish 'player_Yrs'
+results_cleanPlayer_Yrs_Sig <- results_clean %>%
+  mutate(Highlight = ifelse(Variable == "player_Yrs", "Player's Years of Experience", "Other Variables"))
+# Create a bar chart of the z-scores
+Player_Yrs_Sig <- ggplot(results_cleanPlayer_Yrs_Sig, aes(x = reorder(Variable, Z_Score), 
+                                                          y = Z_Score, fill=Highlight)) +
+  geom_bar(stat = "identity") +  # Use identity to use the heights of the bars from the data
+  coord_flip() +  # Flip coordinates to make it easier to read variable names
+  labs(title = "Z-Scores of Player's Years of Experience",
+       x = "Variables",
+       y = "Z-Score") +
+  scale_fill_manual(values = c("Player's Years of Experience"= "red", "Other Variables" = "grey")) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "black", size = 0.3) +
+  geom_hline(yintercept = -1, linetype = "dashed", color = "black", size = 0.3) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),  # Center the plot title
+    legend.position = "bottom",
+    axis.text.y = element_blank())
+print(Player_Yrs_Sig)
+```
+
+It was found that `player_Yrs` is indeed a strong predictor of coaching potential, as it exceeds the Z-score threshold, as shown in the figure titled *"Z-Scores of a Player's Years of Experience Variable."* The variable `player_Yrs`, representing the number of years a player has been active in the NFL, shows a notably high Z-score. The figure indicates that among the variables analyzed, a player's years of experience ranks as the 4th most effective predictor of coaching performance based on the Z-score. This high value suggests a strong statistical significance compared to other variables, highlighting `player_Yrs` as a particularly strong predictor of coaching potential.
+
+```{r, include=FALSE, echo=FALSE, cache=TRUE, message=FALSE, warning=FALSE}
+model <- lm(score_logits ~ 1 + player_Yrs, data = CoachTrain_df)
+
+# Get the model summary
+model_summary <- summary(model)
+```
+
+```{r Figure5, fig.cap = "The graph displays a Box and Whisker plot of the coefficient estimates for predictor variables in a regression model, highlighting their significance.", cache=TRUE, message=FALSE, echo=FALSE, warning=FALSE, fig.width=7, fig.height=5}
+
+# Get the model summary
+model_summary <- summary(model)
+
+# Extract coefficients to a dataframe
+coefficients_df <- as.data.frame(model_summary$coefficients)
+coefficients_df$Variable <- rownames(coefficients_df)
+
+# Convert p-values to a logical vector for significance
+coefficients_df$Significant <- coefficients_df$`Pr(>|t|)` < 0.05
+
+# Plotting
+plot <- ggplot(coefficients_df, aes(x = Variable, y = Estimate, fill = Significant)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = Estimate - `Std. Error`, ymax = Estimate + `Std. Error`), width = 0.2) +
+  scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "grey"), name = "Significance") +
+  labs(title = "Coefficient Estimates of Player Years & it's Significance to Coaching Potential",
+       x = "Predictor Variables",
+       y = "Estimate") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))  # Rotate x labels for clarity
+
+# Display the plot
+print(plot)
+```
+
+However, further analysis of the `player_Yrs` variable in relation to coaching reveals additional complexities. The intercept and `player_Yrs` are shown with their respective estimates and confidence intervals. The red bar indicates that `player_Yrs` is a statistically significant predictor, as its confidence interval does not include zero, contrasting with the grey bar for the intercept, which is not statistically significant. While the graph in *Figure 5* clearly demonstrates that the length of a player's career is a highly significant predictor in models designed to forecast future coaching success, the significantly negative coefficient in *Figure 6* for `player_Yrs` indicates that longer playing careers may correlate with lower scores on our coaching potential metric. This finding suggests that players with extensive careers on the field may not transition as effectively into coaching roles, or that their long playing careers may not necessarily predict coaching success. As a result, the hypothesis that a longer career in the NFL is likely to correlate with greater success as a coach must be rejected. This outcome suggests that extensive careers on the field may not be a reliable predictor of coaching success on the coaching potential metric.
+
+## 3.2 Career Performance metrics are best indicators of Potential for Coaching
+
+*3.2.1 Initial modelling*
+
+`r newthought('In the previous graph')` it was observed that while the length of a player's career is a highly significant predictor of their coaching potential, it wasn't the only significant factor. If you look to the right, in *Figure 7* titled *"Predictive Impact of Individual Performance Variables,"* you can see that many other variables contribute significantly to a model predicting a player's coaching potential. To predict the coaching potential, represented as $Y_i$ where $Y_i$ is the ratio of wins to losses for each coach, a forward selection regression method was employed. This approach begins with a minimal model containing no predictors and iteratively adds predictors that significantly improve the model based on the Akaike Information Criterion (AIC). This method was chosen because:
+
+```{r Figure6, fig.cap = "This bar graph of the Z-score of all perfomance variables but highlights that there are other variables that are significant predictors i.e. |z-score| > 1 of a player's coaching potential.", cache=TRUE, message=FALSE, fig.margin = TRUE, echo=FALSE, warning=FALSE, fig.width=5, fig.height=4}
+results_clean <- results[!is.na(results$Z_Score), ]
+
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# Preparing data
+results_clean <- results_clean %>%
+  mutate(
+    # Calculate significance
+    significance = ifelse(abs(Z_Score) > 1, "Significant", "Non-significant"),
+    # Rescale Z_Scores for significant entries to control the color gradient
+    rescaled_score = ifelse(significance == "Significant", 
+                            scales::rescale(abs(Z_Score), c(0.5, 1), c(1, max(abs(Z_Score)))), 
+                            NA)  # Use NA for non-significant to exclude from gradient scale
+  )
+
+# Plot
+ggplot(results_clean, aes(x = reorder(Variable, Z_Score), y = Z_Score, fill = rescaled_score)) +
+  geom_bar(stat = "identity") +  # Use identity to use the heights of the bars from the data
+  coord_flip() +  # Flip coordinates to make it easier to read variable names
+  scale_fill_gradientn(
+    colors = c("grey", "blue"),  # Gradient from grey to blue
+    na.value = "grey",  # Non-significant are grey
+    name = "",  # Legend title
+    limits = c(0.4, 1),
+    breaks = c(0.4, 0.7, 1),
+    labels = c("None", "Medium", "High")
+  ) +
+  labs(title = "Predictive Impact of Individual Performance Variables",
+       x = "Variable",
+       y = "Z-Score") +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "black", size = 0.3) +
+  geom_hline(yintercept = -1, linetype = "dashed", color = "black", size = 0.3) +
+  theme_minimal() +
+  theme(legend.position = "bottom", axis.text.y = element_blank())
+```
+
+-   *Simplicity:* It starts with no predictors and adds one at a time, which simplifies understanding which predictors have the most significant initial impact on the response.
+-   *Performance:* It helps in identifying a parsimonious model by introducing only those variables that provide a substantial improvement in model fit.
+-   *Control Overfitting:* By adding variables step-by-step and evaluating their impact, forward selection can help in avoiding overfitting compared to including all variables at once.
+
+However, after initially applying forward selection to the dataset, the method did not seem to produce predictors $X_1, X_2, \ldots, X_n$ that are deemed the most relevant in predicting $Y$, the coaching potential score (score logits), and in reducing the AIC. As noted in *Figure 7*, not all the variables were significant. Therefore, it was decided to further explore each of the variables and their relationship to coaching potential to manually produce an optimal set of variables on which forward selection would be carried out.
+
+**3.2.2 Manual Variable Exploration**
+
+`r newthought('Using a linear regression model')`, the win/loss ratio ($Y_i$) of each player was designated as the dependent variable. The predictor variables ($X_1, X_2, \ldots, X_n$) included performance stats such as touchdowns, passing yards, and interceptions.
+
+Moreover, it was crucial to identify combinations of these variables that could enhance the predictive power of the model. In the analysis, the strength of associations between combinations of various predictors and the outcome variable was examined, as represented by the Z-scores. In *Figure 8*, the heatmap below, each cell corresponds to the Z-score from a linear model where `score_logits` is regressed against pairs of predictor variables. High absolute Z-scores indicate a stronger relationship with the outcome, suggesting that these variables are significant predictors within the context of the model.
+
+```{r appVar_Z_Scores2, fig.cap = "Butterfly bar graph of the Z-score of all perfomance variables but highlights those variables that are significant predictors i.e. |z-score| > 1 ", cache=TRUE, include=FALSE, message=FALSE, warning=FALSE}
+library(ggplot2)
+
+# Setting up the custom color scale based on Z-score thresholds
+results_clean <- results_clean %>%
+  mutate(fill_color = case_when(
+    Z_Score < -1 ~ scales::rescale(Z_Score, c(1, 0.5), c(min(Z_Score), -1)),
+    Z_Score > 1  ~ scales::rescale(Z_Score, c(1, 0.5), c(1, max(Z_Score))),
+    TRUE         ~ 0.5  # Grey area between -1 and 1
+  ))
+
+# Custom color function for deepening blue and grey in the middle
+custom_color <- colorRampPalette(c("blue", "grey", "blue"))
+
+ggplot(results_clean, aes(x = reorder(Variable, Z_Score), y = Z_Score, fill = fill_color)) +
+  geom_bar(stat = "identity") +  # Use identity to use the heights of the bars from the data
+  coord_flip() +  # Flip coordinates to make it easier to read variable names
+  labs(title = "Z-Scores of Performance Variables and their Significance",
+       x = "Variable",
+       y = "Z-Score") +
+  scale_fill_gradientn(colors = custom_color(100), limits = c(0, 1),
+                       name = "", 
+                       breaks = c(0, 0.5, 1),
+                       labels = c("High", "Low", "High"),
+                       ) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "black", size = 0.3) + 
+  geom_hline(yintercept = -1, linetype = "dashed", color = "black", size = 0.3) + 
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+```
+
+```{r include=FALSE, eval=FALSE}
+
+# Filter out variables that do not have NA z-scores
+valid_vars <- results$Variable[!is.na(results$Z_Score)]
+
+# Function to fit models and calculate z-scores, and filter results
+fit_model <- function(vars) {
+  # Create the formula from the combination of variables
+  formula_str <- paste("score_logits ~", paste(vars, collapse = " + "))
+
+  # Fit the linear model
+  model <- lm(formula_str, data = CoachTrain_df)
+
+  # Extract the coefficients and standard errors
+  coefs <- summary(model)$coefficients
+
+  # Calculate z-scores
+  z_scores <- coefs[, "Estimate"] / coefs[, "Std. Error"]
+  z_scores1 <- z_scores[2: length(z_scores)]
+
+  # Filter results where absolute z-score is greater than 1
+  min_z_score <- abs(min(z_scores1))
+
+  # Create a data frame of results with significant z-scores
+  if ((min_z_score)>4) {  # Check if there are any significant results
+    data.frame(Combination = paste(vars, collapse = " + "), Z_Scores = min_z_score, row.names = NULL)
+  } else {
+    NULL  # Return NULL if no significant results
+  }
+}
+
+# Store the results in a new data frame
+combination_results <- data.frame()
+
+# Loop over a reasonable range of variables to generate combinations
+for (i in 1:6) {  # Example: using 1 and 2 variable combinations for illustration
+  # Generate combinations of i variables
+  combs <- combn(valid_vars, i, simplify = FALSE)
+
+  # Apply the fit_model function to each combination
+  model_results <- lapply(combs, fit_model)
+
+  # Combine non-null results into one data frame
+  model_results <- do.call(rbind, model_results[!sapply(model_results, is.null)])
+
+  # Add to the overall results data frame
+  combination_results <- rbind(combination_results, model_results)
+}
+write.csv(combination_results, "combination_results.csv", row.names = FALSE)
+```
+
+```{r eval=FALSE, include=FALSE}
+top_z_scores <- combination_results[order(-abs(combination_results$Z_Scores)), ]
+# Select the top 20 entries
+top_20_z_scores <- head(top_z_scores, 10)
+
+# Print the top 20 z-scores
+print(top_20_z_scores)
+```
+
+```{r, echo=FALSE, cache=TRUE, message=FALSE, warning=FALSE}
+library(dplyr) #wrote myself
+
+Vars1 <- c("player_loss_rate", "player_N", "player_tie_rate", "player_win_rate", "player_Yrs", "position",   
+           "sum_defense_interception_yards", "sum_defense_interceptions", "sum_defense_sacks", 
+           "sum_defense_tackle_assists", "sum_defense_tackles", "sum_field_goal_attempts", "sum_field_goal_makes", 
+           "sum_kick_return_attempts","sum_kick_return_yards","sum_passing_attempts","sum_passing_completions", 
+           "sum_passing_interceptions", "sum_passing_rating", "sum_passing_sacks", "sum_passing_sacks_yards_lost", "sum_passing_touchdowns", 
+           "sum_passing_yards","sum_point_after_makes", "sum_punt_return_attempts", "sum_punt_return_touchdowns", 
+           "sum_punt_return_yards", "sum_punting_attempts","sum_punting_blocked", "sum_punting_yards", 
+           "sum_receiving_receptions", "sum_receiving_targets", "sum_receiving_touchdowns", "sum_receiving_yards", 
+           "sum_rushing_attempts", "sum_rushing_touchdowns", "sum_rushing_yards")      
+
+Vars2 <- c("player_loss_rate", "player_N", "player_tie_rate", "player_win_rate", "player_Yrs", "position",   
+           "sum_defense_interception_yards", "sum_defense_interceptions", "sum_defense_sacks", 
+           "sum_defense_tackle_assists", "sum_defense_tackles", "sum_field_goal_attempts", "sum_field_goal_makes", 
+           "sum_kick_return_attempts","sum_kick_return_yards","sum_passing_attempts","sum_passing_completions", 
+           "sum_passing_interceptions", "sum_passing_rating", "sum_passing_sacks", "sum_passing_sacks_yards_lost", "sum_passing_touchdowns", 
+           "sum_passing_yards","sum_point_after_makes", "sum_punt_return_attempts", "sum_punt_return_touchdowns", 
+           "sum_punt_return_yards", "sum_punting_attempts","sum_punting_blocked", "sum_punting_yards", 
+           "sum_receiving_receptions", "sum_receiving_targets", "sum_receiving_touchdowns", "sum_receiving_yards", 
+           "sum_rushing_attempts", "sum_rushing_touchdowns", "sum_rushing_yards")
+
+z_score_matrix <- matrix(NA, nrow = length(Vars1), ncol = length(Vars2),
+                         dimnames = list(Vars1, Vars2))
+
+findZscore2 <- function(vari, varj) {
+  if (vari %in% names(CoachTrain_df) && varj %in% 
+      names(CoachTrain_df) && 
+      sum(complete.cases(CoachTrain_df[, c(vari, varj, "score_logits")])) > 0) {
+          formula_str <- paste("score_logits ~ 1 + ", vari, "+", varj)
+          model <- try(lm(formula_str, data = CoachTrain_df), silent = TRUE)
+
+          if (inherits(model, "lm")) {
+            coefs <- summary(model)$coefficients
+            if (nrow(coefs) > 1) {  # Ensure the variable was included in the model
+                z_scores <- coefs[, "Estimate"] / coefs[, "Std. Error"]
+                return(min(abs(z_scores[2: length(z_scores)])))
+      }
+    }
+  }
+  return(NA)  # Use NA for cases where a z-score cannot be computed
+}
+ #make matrix
+for (i in seq_along(Vars1)) {
+  for (j in seq_along(Vars2)) {
+    z_score_matrix[i, j] <- findZscore2(Vars1[i], Vars2[j])
+  }
+}
+```
+
+```{r Figure7, fig.cap = "Heatmap Displaying Z-Scores of NFL Player Performance Variables: This heatmap visualizes the statistical significance (Z-scores) of interactions between various player performance metrics, highlighting how different combinations impact the prediction of coaching potential. Deeper red cells indicate higher Z-scores, suggesting stronger relationships. This visualization aids in identifying the most influential variables for further modeling and analysis.", cache=TRUE, message=FALSE, echo=FALSE, fig.fullwidth=TRUE, fig.width = 10, fig.height = 7}
+library(ggplot2)
+library(reshape2)
+
+# Assuming 'z_score_matrix' is your matrix from the previous calculations
+# Convert the matrix to a data frame for plotting
+z_score_data <- melt(z_score_matrix, varnames = c("Vars1", "Vars2"))
+
+# Generate the heatmap
+heatmap_plot <- ggplot(z_score_data, aes(x = Vars1, y = Vars2, fill = value)) +
+  geom_tile(color = "white") +  # Add tiles with white borders
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 1,
+                       limits = c(min(z_score_data$value, na.rm = TRUE), max(z_score_data$value, na.rm = TRUE)),
+                       na.value = "grey", name = "Min Z-Score") +
+  labs(title = "Impact of Performance Data on Predicting Coaching Potential") +
+  theme_minimal() +  # Minimal theme to keep focus on data
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.07), 
+        title = element_text(hjust = 1, face = "bold"),
+        axis.title.x = element_blank(), axis.title.y = element_blank())
+print(heatmap_plot)
+```
+
+From the heatmap in *Figure 8*, it is evident that certain variables, particularly those related to specific on-field performance metrics such as `sum_passing_yards` and `sum_rushing_attempts`, tend to yield higher Z-scores when combined. This indicates that these combinations may significantly enhance the model's ability to predict coaching potential. Identifying such high-impact variables is crucial as it allows the model development to focus on the most relevant predictors.
+
+```{r top_combinations, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+combination_results <- read.csv("combination_results.csv", header = TRUE)
+```
+
+When conducting this kind of initial vetting of variables, it is customary to select those that will result in the most significant improvement to the model's performance. This evaluation typically extends beyond just the Z-score. Therefore, as the variable selection progressed, it was imperative to continually assess potential biases in the model. Notably, variables such as the number of years, which initially appeared to be strong predictors, did not demonstrate strong predictive power when combined with other performance metrics. Multiple combinations of variables——up to six——were analyzed, identifying those combinations that could potentially yield the best outcomes when assessing cross-validation error, Z-scores, and maximum adjusted R-squares. The top variables across these criteria were identified as follows:
+
+```{r eval=FALSE, include=FALSE, cache=TRUE, message=FALSE, warning=FALSE}
+fit_model <- function(combination) {
+  formula_str <- as.formula(paste("score_logits ~", combination))
+  
+  # Fit the linear model
+  model <- lm(formula_str, data = CoachTrain_df)
+  
+  # Calculate R-squared
+  rsq <- summary(model)$adj.r.squared
+  # Return a list with the new data
+  list(
+    Combination = combination,
+    R_Squared = rsq
+  )
+}
+
+# Initialize a new dataframe to store the results
+rsq_results <- data.frame(Combination = character(), R_Squared = numeric(), stringsAsFactors = FALSE)
+
+# Loop through each combination and apply the fit_model function
+for (combination in combination_results$Combination) {
+  result <- fit_model(combination)
+  rsq_results  <- rbind(rsq_results, result)
+}
+
+# Print the results to view them
+print(head(rsq_results[order(rsq_results$R_Squared, decreasing = TRUE), ], 10))
+
+```
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+library(glmnet)
+library(dplyr)
+
+# Define a function to fit the glmnet model on specified combinations
+fit_glmnet_model <- function(combination) {
+  vars <- unlist(strsplit(combination, " \\+ "))  # Split the combination string into variable names
+  df <- CoachTrain_df[, c(vars, "score_logits"), drop = FALSE]  # Select relevant columns
+
+  # Check for sufficient data and no NAs
+  if (ncol(df) >= 2 && sum(complete.cases(df)) == nrow(df)) {
+    x <- as.matrix(df[, vars, drop = FALSE])  # Predictor variables
+    y <- df[["score_logits"]]  # Response variable
+
+    # Fit the glmnet model
+    fit <- cv.glmnet(x, y, alpha = 0.5)  # Example with alpha for elastic net
+
+    # Extract the lambda that gives minimum mean cross-validated error
+    lambda_min <- fit$lambda.min
+    cv_error <- sqrt(min(fit$cvm))  # Cross-validated RMSE at lambda.min
+
+    return(data.frame(Combination = combination, CV_Error = cv_error, Lambda = lambda_min))
+  } else {
+    return(data.frame(Combination = combination, CV_Error = NA, Lambda = NA))
+  }
+}
+
+# Apply the function to each combination in the results DataFrame
+results_with_cv <- lapply(combination_results$Combination, fit_glmnet_model)
+
+# Combine results into a single DataFrame
+cv_results <- do.call(rbind, results_with_cv)
+
+```
+
+```{r eval=FALSE, include=FALSE}
+top_rsq <- rsq_results[order(rsq_results$R_Squared, decreasing = TRUE), "Combination"][1:10]
+
+# Get top 10 CV Error combinations
+top_cv <- cv_results[order(cv_results$CV_Error, decreasing = FALSE), "Combination"][1:10]
+
+# Get top 10 Z-Scores combinations
+top_z <- combination_results[order(-abs(combination_results$Z_Scores)), "Combination"][1:10]
+
+# Combine all top combinations into one vector and remove duplicates
+top_combinations <- unique(c(top_rsq, top_cv, top_z))
+
+# Convert the vector to a data frame
+top_combinations_df <- data.frame(Combination = top_combinations, stringsAsFactors = FALSE)
+write.csv(top_combinations_df, "top_combinations_df.csv", row.names = FALSE)
+```
+
+```{r, echo=FALSE, cache=TRUE, warning=FALSE, message=FALSE, include=FALSE}
+
+top_combinations <- read.csv("top_combinations_df.csv", header = TRUE)
+all_variables <- vector("list")
+
+# Loop through each row in the data frame
+for (combination in top_combinations$Combination) {
+  # Split the combination string by "+" and trim any leading/trailing whitespace
+  variables <- strsplit(combination, "\\s*\\+\\s*")[[1]]
+  
+  # Add to the all_variables vector
+  all_variables <- c(all_variables, variables)
+}
+
+# Reduce to unique variables
+unique_variables <- unique(unlist(all_variables))
+
+all_variables_formula <- paste(unique_variables, collapse = " + ")
+
+# Define the upper model
+upper_model <- as.formula(paste("score_logits ~", all_variables_formula))
+
+# Define the initial model (intercept only)
+initial_model <- lm(score_logits ~ 1, data = CoachTrain_df)
+forward_selected_model <- step(initial_model, 
+                               scope = list(lower = initial_model, upper = upper_model), 
+                               direction = "forward")
+```
+
+```{r tab1, echo=FALSE, cache=TRUE, warning=FALSE, message=FALSE}
+vars <- data.frame(Variables = unique_variables)
+knitr::kable(
+  vars, caption = 'Unique variables that best maximized Z-score and R-square, and minimized Cross Validation Error'
+)
+```
+
+Using these variables as the upper model resolved earlier issues where forward selection could not identify any significant variables. Starting with a simple model that included only an intercept, which provided a baseline AIC of -71.22, the stepwise approach allowed for the iterative testing and inclusion of performance metrics that reduced the AIC, indicating an enhancement in model fit.
+
+As shown in the model summary in the Appendix, there was a significant drop in AIC from -71.22 to -79.408 with the inclusion of `player_L` (player losses). This was the first indication that specific aspects of a player's career performance, such as losses, are substantial predictors of potential coaching acumen. The rationale could be that the insight and experience gained from losses are crucial for developing the strategic and resilience skills necessary for coaching.
+
+Further refining the model by adding `player_tie_rate` resulted in an even more drastic reduction in AIC to -89.614. This suggests that not just losses, but also how often a player's games result in ties, significantly contributes to predicting coaching potential. Ties might represent scenarios where strategic decisions play pivotal roles, thus providing a player with experiences that are invaluable when transitioning to a coaching role.
+
+**3.2.3 Choosing Best Model**
+
+`r newthought('It’s crucial to note that')` after achieving this model configuration with `player_L` and `player_tie_rate` through forward selection, the addition of other variables did not further decrease the AIC. This stabilization implies that while other career performance metrics are important, they may not independently impact coaching potential as significantly as losses and tie rates when modeled together. Although this model may be considered optimal based on the AIC, it doesn't guarantee the best performance until it is validated on the testing data.
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+library(dplyr)
+library(broom)  # for tidy statistical summaries
+
+# Assuming top_combinations is a vector of character strings with variable combinations
+# And forward_selected_model is already defined and trained
+
+# Function to compute MSE
+compute_mse <- function(predictions, actual) {
+  mean((predictions - actual)^2)
+}
+
+# Prepare a dataframe to store results
+model_performance <- data.frame(ModelCombination = character(), MSE = numeric(), Model = character(), stringsAsFactors = FALSE)
+i <- 1
+# Loop through each combination, fit the model, predict and compute MSE
+for (combination in top_combinations$Combination) {
+  formula_str <- paste("score_logits ~", combination)
+  model <- lm(formula_str, data = CoachTrain_df)
+  predictions <- predict(model, newdata = CoachTest_df)
+  mse <- compute_mse(predictions, CoachTest_df$score_logits)
+  Model_name <- paste("Model ", i)
+  model_performance <- rbind(model_performance, data.frame(ModelCombination = formula_str, MSE = mse, Model = Model_name ))
+  i <- i + 1
+}
+
+# Evaluate the forward selected model
+forward_predictions <- predict(forward_selected_model, newdata = CoachTest_df)
+forward_mse <- compute_mse(forward_predictions, CoachTest_df$score_logits)
+model_performance <- rbind(model_performance, data.frame(ModelCombination = "score_logits ~ player_L + player_tie_rate", MSE = forward_mse, Model = paste("Forward Selected Model") ))
+
+# Order the models by MSE and select the top 5
+top_models <- model_performance %>%
+  arrange(MSE) %>%
+  head(5)
+```
+
+```{r tab2, echo=FALSE, cache=TRUE, warning=FALSE, message=FALSE}
+vars <- top_models
+table <- knitr::kable(
+  vars, caption = 'Variable Combinations for the Best Performing Models that Minimized Testing Error',
+  format = "latex",  # Ensure LaTeX output for PDF
+  booktabs = TRUE    # Use booktabs for better table format
+)
+styled_table <- kable_styling(table, full_width = TRUE, latex_options = "scale_down")
+
+final_table <- column_spec(styled_table, 1, width = "7cm", )  # Adjusted width to a smaller size
+
+# Output the final table
+final_table
+
+```
+
+After testing the models on the validation dataset, the forward-selected model consisting only of `player_L` and `player_tie_rate` yielded the lowest mean squared error (MSE) of 1.351595, as shown in *Figure 9*, confirming its predictive strength and reliability when assessed against unseen data. This outcome not only validates the forward selection process but also highlights the effectiveness of using player losses and tie rates as significant predictors of coaching potential.
+
+```{r Figure8, fig.cap="This Bar chart displays the mean squared error (MSE) of various predictive models, ranked from lowest to highest error. The red bars represent the top five performing models, highlighting their superior predictive accuracy compared to other models, which are shown in blue. This visualization effectively demonstrates the comparative performance of each model, emphasizing the models that are most effective at minimizing prediction errors in forecasting coaching potential.", cache=TRUE, message=FALSE, fig.margin=TRUE, echo=FALSE, warning=FALSE, fig.width=8, fig.height=6, out.width='100%', out.height='\\textheight'}
+
+# Assuming model_performance is already ordered by MSE
+model_performance <- model_performance %>%
+  mutate(Top5 = ifelse(MSE <= 2.098009, "Best 5 Models", "Other Models"))  # Mark the top 5 models
+
+mse_plot <- ggplot(model_performance, aes(x = reorder(Model, -MSE), y = MSE, fill = Top5)) +
+  geom_col(show.legend = TRUE) +  # Use fill to apply conditional coloring
+  scale_fill_manual(values = c("Best 5 Models" = "red", "Other Models" = "blue")) +
+  labs(title = "Comparison of Model Performance",
+       x = "Models",
+       y = "Mean Squared Error (MSE)",
+       fill = "Model Ranking") +  # Add a label for the legend
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) + coord_flip()  # Improve label readability
+
+# Display the plot
+print(mse_plot)
+
+```
+
+The empirical evidence from testing these models provided significant insights into the hypothesis that career performance metrics such as losses and tie rates are strong indicators of potential coaching success. The fact that the model containing only `player_L` and `player_tie_rate` outperformed more complex models, as shown in *Table 2* above, underscores the strong predictive power of these variables on their own. This supports the hypothesis that certain aspects of a player's career, particularly those related to resilience and experience in the face of adversities (losses and ties), are critical in shaping potential coaching abilities.
+
+However, the limited improvement from additional performance metrics suggests a nuanced understanding: while good performance during an NFL player's career is indicative, it is not exhaustive in predicting coaching success. This leads to a partial validation of the hypothesis—acknowledging the importance of these performance metrics while also recognizing the potential for other, less obvious factors that might influence coaching efficacy, which were not captured by the additional variables tested. This also demonstrates a crucial aspect of model building, where simplicity often outweighs the allure of adding more predictors, especially when they do not significantly enhance the model's performance on testing data.
+
+## 3.3 Racial Biases Exist in Coaching Hiring Practices
+
+As we attempt to understand racial bias in the hiring process, the third hypothesis operates under the assumption that NFL teams strategically select coaches in a manner aimed at maximizing team performance, given the limited opportunities available due to the finite number of coaching positions opening each year. To explore this hypothesis, forward selection was employed in statistical modeling to pinpoint variables that could effectively predict the commencement year (**`From`** variable) of a coaching career, post-NFL. However, the results from the forward selection process revealed that none of the tested variables significantly enhanced the prediction of when a coaching career would start. This outcome suggests that the timing of players' transitions to coaching roles might be influenced by factors not readily captured by their playing career statistics. On average, the analysis found that players begin their coaching careers approximately 14 years after concluding their active NFL playing careers, indicating a significant gap that may involve gaining different forms of experience or skills not directly measured by on-field performance.
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+all_no_eth_dup <- full_join(full_join(players_df %>% mutate(is_player = TRUE), games_summary,  by = "player_id"), coaches_df %>% mutate(is_coach = TRUE), by = c("name" = "name"))
+
+# remove all players with duplicated names from the dataset
+all_no_eth <- all_no_eth_dup %>%
+  group_by(name) %>%
+  filter(n() == 1) %>%
+  ungroup()
+
+all_no_eth <- all_no_eth %>%
+  dplyr::select( -hof_induction_year, -Rk, -W.L..1, -G.plyf, -W.plyf, -L.plyf, -SBwl, -Conf, -G....500, -Yr.plyf) %>%
+  mutate(
+    firstname = word(name, 1),     # Extracts the first word from the 'name' column
+    lastname = word(name, 2)      # Extracts the last word from the 'name' column
+  )
+```
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+# Predicting ethnicity
+ethnicity_predictions_1 <- predict_ethnicity(all_no_eth$firstname, all_no_eth$lastname)
+```
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+all <- merge(all_no_eth, ethnicity_predictions_1, by = c("firstname", "lastname")) %>% distinct()
+
+all <- all %>%
+  rowwise() %>%
+  mutate(race = case_when(
+    prob_black >= max(prob_hispanic, prob_white) ~ "black",
+    prob_hispanic >= max(prob_black, prob_white) ~ "hispanic",
+    prob_white >= max(prob_black, prob_hispanic) ~ "white",
+    TRUE ~ race  # fallback, should not be needed unless all probabilities are equal
+  )) %>%
+  ungroup() # Ensures further operations are not performed rowwise
+```
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+all_players_coaches = all %>% filter(is_player & is_coach) %>% mutate(gap = From - player_To)
+# Create an empty data frame to store results
+results <- data.frame(Variable = character(), Z_Score = numeric(), stringsAsFactors = FALSE)
+variables <- colnames(all_players_coaches) 
+for (var in variables) {
+  # Check if the variable actually exists in the dataframe to avoid errors
+  if (var %in% names(all_players_coaches) & length(unique(all_players_coaches[[var]])) > 1) {
+    # Construct the formula string
+    formula_str <- paste("gap~1+", var)
+
+    # Fit the linear model
+    coach_model_test <- lm(formula_str, data = all_players_coaches)
+    # Calculate the z-score
+    # Check if the variable has a coefficient in the model summary (i.e., was included in the model)
+    if (var %in% rownames(summary(coach_model_test)$coefficients)) {
+      z_score <- summary(coach_model_test)$coefficients[var, "Estimate"] /
+                 summary(coach_model_test)$coefficients[var, "Std. Error"]
+    } else {
+      z_score <- NA  # Assign NA if the variable was not included or model failed
+    }
+
+    # Append results to the data frame
+    results <- rbind(results, data.frame(Variable = var, Z_Score = z_score))
+  } else {
+    results <- rbind(results, data.frame(Variable = var, Z_Score = NA))  # NA for non-existent variables
+  }
+}
+valid_results <- results %>% filter(!is.na(Z_Score) & !(Variable %in% colnames(coaches_df))) %>% arrange(abs(Z_Score))
+print(valid_results)
+```
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+my_AIC = function(model, data, col) 2*length(coef(model)) +
+  nrow(data)*log(mean((predict(model, data) - data[[col]])^2))
+
+# Filter out rows with any missing values in the relevant columns
+# Assume 'From' is your response variable, and valid_results$Variable contains your predictors
+required_columns <- c("gap", valid_results$Variable)
+all_players_coaches_complete <- all_players_coaches %>%
+                                select(all_of(required_columns)) %>%
+                                na.omit()
+
+set.seed(243)  # for reproducibility
+train_indices <- sample(1:nrow(all_players_coaches_complete), size = 0.7 * nrow(all_players_coaches_complete))  # 70% training data
+train_set <- all_players_coaches_complete[train_indices, ]
+test_set <- all_players_coaches_complete[-train_indices, ]
+
+
+# Define the initial model (intercept only) on the complete cases dataset
+initial_From_model <- lm(gap ~ 1, data = train_set)
+
+### BEGIN MANUAL FORWARD SELECTION
+
+# Start with the initial model
+forward_selected_From_model <- initial_From_model
+variables <- valid_results$Variable
+
+# Manual forward selection
+for (var in variables) {
+  models <- list()
+  for (v in variables[!variables %in% names(coef(model))]) {
+    old_vars <- paste(names(coef(model)[-1]), collapse = "+")
+    formula <- as.formula(paste("gap ~", old_vars, "+", v))
+    models[[v]] <- lm(formula, data = train_set)
+  }
+
+  # Find the model with the lowest AIC
+  aics <- sapply(models, function(model) my_AIC(model, test_set, "gap"))
+  best_var <- which.min(aics)
+  best_model <- models[[best_var]]
+  
+  # Update current model if improvement
+  if (my_AIC(best_model, test_set, "gap") < my_AIC(forward_selected_From_model, test_set, "gap")) {
+    forward_selected_From_model <- best_model
+#    model_list[[names(best_var)]] <- best_model
+  } else {
+    break  # Stop if no improvement
+  }
+}
+
+```
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+all_players = all %>% filter(is_player)
+From_preds = predict(forward_selected_From_model, all_players, type = "response", na.action = na.pass) %>% round()
+score_logit_preds = predict(forward_selected_model, all_players, type = "response", na.action = na.pass)
+all_players_pred = cbind(all_players, pred_From = From_preds + all_players$player_To, pred_score_logits = score_logit_preds) %>% filter(!is.na(pred_From))
+```
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+allpc_by_From = all_players_coaches %>%
+  group_by(From) %>%
+  summarize(
+    n_From = n(),
+    p_white = sum(race == "white") / n(),
+    n_white = sum(race == "white"),
+    p_black = sum(race == "black") / n(),
+    n_black = sum(race == "black"),
+    p_hispanic = sum(race == "hispanic") / n(),
+    n_hispanic = sum(race == "hispanic")
+  )
+
+all_players_ready = left_join(all_players_pred, allpc_by_From, by=c("pred_From" = "From")) %>% filter(!is.na(n_From))
+pred_by_From = all_players_ready %>% 
+  group_by(pred_From) %>%
+  arrange(desc(pred_score_logits)) %>%
+  mutate(grp_pos = row_number()) %>%
+  summarise(
+    pred_n_From = sum(grp_pos <= n_From),
+    pred_gap = min(n_From) - pred_n_From,
+    pred_n_white = sum(race == "white" & grp_pos <= n_From),
+    pred_p_white = sum(race == "white" & grp_pos <= n_From) / sum(grp_pos <= n_From),
+    pred_n_black = sum(race == "black" & grp_pos <= n_From),
+    pred_p_black = sum(race == "black" & grp_pos <= n_From) / sum(grp_pos <= n_From),
+    pred_n_hispanic = sum(race == "hispanic" & grp_pos <= n_From),
+    pred_p_hispanic = sum(race == "hispanic" & grp_pos <= n_From) / sum(grp_pos <= n_From)
+  )  # na.rm = TRUE to handle any NA values
+
+by_From = inner_join(pred_by_From, allpc_by_From, by=c("pred_From" = "From"))
+```
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+smooth = data.frame(
+  pred_From = by_From$pred_From,
+  pred_n_white_sm = rollapply(by_From$pred_n_white, width = 5, FUN = sum, align = 'left', fill = NA),
+  pred_n_black_sm = rollapply(by_From$pred_n_black, width = 5, FUN = sum, align = 'left', fill = NA),
+  pred_n_hispanic_sm = rollapply(by_From$pred_n_hispanic, width = 5, FUN = sum, align = 'left', fill = NA),
+  n_white_sm = rollapply(by_From$n_white, width = 5, FUN = sum, align = 'left', fill = NA),
+  n_black_sm = rollapply(by_From$n_black, width = 5, FUN = sum, align = 'left', fill = NA),
+  n_hispanic_sm = rollapply(by_From$n_hispanic, width = 5, FUN = sum, align = 'left', fill = NA)
+)
+
+smooth$pred_n_sm <- smooth$pred_n_white_sm + smooth$pred_n_black_sm + smooth$pred_n_hispanic_sm
+smooth$pred_p_white_sm <- smooth$pred_n_white_sm / smooth$pred_n_sm
+smooth$pred_p_black_sm <- smooth$pred_n_black_sm / smooth$pred_n_sm
+smooth$pred_p_hispanic_sm <- smooth$pred_n_hispanic_sm / smooth$pred_n_sm
+
+smooth$n_sm <- smooth$n_white_sm + smooth$n_black_sm + smooth$n_hispanic_sm
+smooth$p_white_sm <- smooth$n_white_sm / smooth$n_sm
+smooth$p_black_sm <- smooth$n_black_sm / smooth$n_sm
+smooth$p_hispanic_sm <- smooth$n_hispanic_sm / smooth$n_sm
+```
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+ggplot() +
+  geom_point(data = by_From, aes(x = pred_n_white, y = n_white), color = "coral2") +
+  geom_smooth(data = by_From, aes(x = pred_n_white, y = n_white), method = "lm", se = TRUE, color = "coral2") +
+  geom_point(data = by_From, aes(x = pred_n_black, y = n_black), color = "mediumorchid4") +
+  geom_smooth(data = by_From, aes(x = pred_n_black, y = n_black), method = "lm", se = TRUE, color = "mediumorchid4") +
+  geom_point(data = by_From, aes(x = pred_n_hispanic, y = n_hispanic), color = "skyblue") +
+  geom_smooth(data = by_From, aes(x = pred_n_hispanic, y = n_hispanic), method = "lm", se = TRUE, color = "skyblue") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dotted", color = "black") +
+  labs(title = "Expected number vs actual per year, by race",
+       x = "Expected number of race becoming a coach per year",
+       y = "Actual number of race becoming a coach per year")
+```
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+ggplot() +
+  geom_point(data = smooth, aes(x = pred_n_white_sm, y = n_white_sm), color = "coral2") +
+  #geom_smooth(data = smooth, aes(x = pred_n_white_sm, y = n_white_sm), method = "lm", se = TRUE, color = "red") +
+  geom_point(data = smooth, aes(x = pred_n_black_sm, y = n_black_sm), color = "mediumorchid4") +
+  #geom_smooth(data = smooth, aes(x = pred_n_black_sm, y = n_black_sm), method = "lm", se = TRUE, color = "purple") +
+  geom_point(data = smooth, aes(x = pred_n_hispanic_sm, y = n_hispanic_sm), color = "skyblue") +
+  #geom_smooth(data = smooth, aes(x = pred_n_hispanic_sm, y = n_hispanic_sm), method = "lm", se = TRUE, color = "blue") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dotted", color = "black") +
+  labs(title = "Expected number vs actual per year, by race",
+       x = "Expected number of race becoming a coach per year (smooth)",
+       y = "Actual number of race becoming a coach per year (smooth)")
+```
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+ggplot() +
+  geom_point(data = by_From, aes(x = pred_p_white, y = p_white), color = "coral2") +
+  #geom_smooth(data = by_From, aes(x = pred_p_white, y = p_white), method = "lm", se = TRUE, color = "red") +
+  geom_point(data = by_From, aes(x = pred_p_black, y = p_black), color = "mediumorchid4") +
+  #geom_smooth(data = by_From, aes(x = pred_p_black, y = p_black), method = "lm", se = TRUE, color = "purple") +
+  geom_point(data = by_From, aes(x = pred_p_hispanic, y = p_hispanic), color = "skyblue") +
+  #geom_smooth(data = by_From, aes(x = pred_p_hispanic, y = p_hispanic), method = "lm", se = TRUE, color = "blue") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dotted", color = "black") +
+  labs(title = "Expected percentage vs actual per year, by race",
+       x = "Expected percentage of race becoming a coach per year",
+       y = "Actual percentage of race becoming a coach per year")
+```
+
+```{r Figure9, cache=TRUE, message=FALSE, warning=FALSE, echo=FALSE, fig.width=7, fig.height=4, fig.cap="This scatter plot compares the expected versus actual percentages of NFL coaches by race per year. Each point represents the proportion of coaches from a particular racial group, with the dotted line indicating where the expected and actual values would match perfectly. The plot reveals disparities in racial representation among NFL coaches, highlighting variations between predicted and observed outcomes."}
+library(ggplot2)
+
+# Assuming 'smooth' is your dataframe with the necessary columns
+ggplot() +
+  geom_point(data = smooth, aes(x = pred_p_white_sm, y = p_white_sm, color = "White")) +
+  geom_point(data = smooth, aes(x = pred_p_black_sm, y = p_black_sm, color = "Black")) +
+  geom_point(data = smooth, aes(x = pred_p_hispanic_sm, y = p_hispanic_sm, color = "Hispanic")) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dotted", color = "black") +
+  scale_color_manual(values = c("White" = "coral2", "Black" = "mediumorchid4", "Hispanic" = "skyblue")) +
+  labs(title = "Expected percentage vs actual per year, by race",
+       x = "Expected percentage of race becoming a coach per year",
+       y = "Actual percentage of race becoming a coach per year",
+       color = "Race")  # Label for the legend
+
+```
+
+To begin, each year was isolated, and the number of new coaches, $n$, was identified. For these positions, the model was employed to predict the starting date for potential coaches based on their estimated coaching potential scores. From this prediction, the top $n$ players deemed most suitable for coaching roles in each respective year were selected. This approach allowed for the construction of an expected racial distribution of coaches, hypothesizing that the most qualified candidates would be chosen.
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+smry = by_From %>% summarize(
+  n_white_total = sum(n_white),
+  n_black_total = sum(n_black),
+  n_hispanic_total = sum(n_hispanic),
+  pred_n_white_total = sum(pred_n_white),
+  pred_n_black_total = sum(pred_n_black),
+  pred_n_hispanic_total = sum(pred_n_hispanic)
+)
+```
+
+Initially, this evaluation was conducted annually to obtain a precise yearly outlook. However, to account for the longevity and continuity inherent in coaching careers, the analysis was refined by aggregating the data into 5-year intervals. This adjustment was made to smooth out year-to-year fluctuations and provide a more stable and reflective measure of trends over time. The expected racial composition for each interval, denoted as $E(\text{Race}|\text{Selected to coach})$, was then compared against the actual racial distribution observed among NFL coaches. The resulting comparison, as visualized in *Figure 10* above, illustrates the discrepancies and alignments between expected and actual racial distributions, shedding light on potential biases or trends in the coaching selection process over the studied periods.
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+score_logit_rmse = sqrt(mean((CoachTest_df$score_logits - predict(forward_selected_model, CoachTest_df))^2))
+# randomly adds noise to score logits toi se how it affects racial distribution
+generate_row = function() {
+  all_players_ready %>% mutate(
+    pred_score_logits_noisy = pred_score_logits + rnorm(
+      length(pred_score_logits),
+      mean = 0,
+      sd = score_logit_rmse
+    )
+  ) %>% 
+  group_by(pred_From) %>%
+  arrange(desc(pred_score_logits_noisy)) %>%
+  mutate(grp_pos = row_number()) %>%
+  ungroup() %>%
+  summarise(
+    pred_n_white_total = sum(race == "white" & grp_pos <= n_From),
+    pred_n_black_total = sum(race == "black" & grp_pos <= n_From),
+    pred_n_hispanic_total = sum(race == "hispanic" & grp_pos <= n_From),
+  )  # na.rm = TRUE to handle any NA values
+}
+```
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+bootstrapped = rdply(3000, generate_row())
+```
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE, include=FALSE}
+one_sided_p_values = bootstrapped %>%
+  summarize(                                                # H0: A = E
+    white1 = mean(pred_n_white_total >= smry$n_white_total), # H1: A > E for white
+    black1 = mean(pred_n_black_total <= smry$n_black_total), # H1: A < E for black
+    hispanic1 = mean(                                        # H1: A < E OR A > E for hispanic
+      pred_n_hispanic_total <= smry$n_hispanic_total |
+        pred_n_hispanic_total >= 2*smry$pred_n_hispanic_total - smry$n_hispanic_total
+    ),
+  )
+one_sided_p_values
+
+two_sided_p_values = bootstrapped %>%
+  summarize(                                                # H0: A = E
+    white2 = mean(pred_n_white_total >= smry$n_white_total | pred_n_white_total <= 2*smry$pred_n_white_total - smry$n_white_total), # H1: A != E for white
+    black2 = mean(pred_n_black_total <= smry$n_black_total | pred_n_black_total >= 2*smry$pred_n_black_total - smry$n_black_total), # H1: A != E for black
+    hispanic2 = mean(pred_n_hispanic_total <= smry$n_hispanic_total | pred_n_hispanic_total >= 2*smry$pred_n_hispanic_total - smry$n_hispanic_total # H1: A != E for hispanic
+    ),
+  )
+```
+
+While *Figure 10* shows that there is a higher number of Black and Hispanic individuals that fall below the expected number, it was necessary to identify the extent to which this holds given that these rankings are based on predicted **`score_logits`**. Recognizing the inherent variability in the model's predictions, random noise—generated based on the Root Mean Square Error (RMSE) of the predictions—was introduced into the **`score_logits`** to simulate different possible outcomes. This procedure was implemented to test alternative hypotheses regarding the actual versus expected number of coaches from different racial groups, specifically focusing on whether white coaches are overrepresented and whether Black and Hispanic coaches are underrepresented compared to model-based expectations.
+
+By repetitively injecting normally distributed noise into the predicted **`score_logits`** and ranking players based on these adjusted scores, the coach selection process was simulated under varied scenarios. Each iteration of this simulation allows observation of how slight variations in model accuracy might influence the racial composition of selected coaches. Grouping these results by the predicted start year and using a ranking mechanism within each group, the number of top-ranked individuals from each race was computed, comparing these figures against actual data. This method enabled exploration of whether the disparities in coaching opportunities among different races could merely be an artifact of prediction errors or if they indicate a deeper, systemic bias in the selection process.
+
+For hypothesis testing, the varied outcomes allowed for the testing of the following hypotheses about the racial distributions among NFL coaches: $$
+H_{0, \text{white}}: \mu_{\text{actual, white}} = \mu_{\text{expected, white}}
+$$ $$
+H_{1, \text{white}}: \mu_{\text{actual, white}} > \mu_{\text{expected, white}}
+$$ $$
+\text{AND}
+$$ $$
+H_{0, \text{black/hispanic}}: \mu_{\text{actual, black/hispanic}} = \mu_{\text{expected, black/hispanic}}
+$$ $$
+H_{1, \text{black/hispanic}}: \mu_{\text{actual, black/hispanic}} < \mu_{\text{expected, black/hispanic}}
+$$
+
+```{r Figure10a, cache=TRUE, message=FALSE, warning=FALSE,  fig.margin = TRUE, echo=FALSE, fig.width=4, fig.height=2.5}
+p1 <- ggplot(bootstrapped, aes(x = pred_n_white_total)) +
+  geom_histogram(binwidth = 1, fill = "coral2", color = "black") +
+  ggtitle("Expected number of white coaches") +
+  xlab("Number of white coaches") +
+  ylab("Probability mass") +
+  geom_vline(xintercept = smry$n_white_total, linetype = "dashed") +
+  geom_vline(xintercept = smry$pred_n_white_total, linetype = "solid") +
+  scale_y_continuous(labels = NULL)
+```
+
+```{r Figure10b, cache=TRUE, message=FALSE, warning=FALSE,  fig.margin = TRUE, echo=FALSE, fig.width=4, fig.height=2.5}
+p2 <- ggplot(bootstrapped, aes(x = pred_n_black_total)) +
+  geom_histogram(binwidth = 1, fill = "mediumorchid4", color = "black") +
+  ggtitle("Expected number of black coaches") +
+  xlab("Number of black coaches") +
+  ylab("Probability mass") +
+  geom_vline(xintercept = smry$n_black_total, linetype = "dashed") +
+  geom_vline(xintercept = smry$pred_n_black_total, linetype = "solid") +
+  scale_y_continuous(labels = NULL)
+```
+
+```{r Figure10c, cache=TRUE, message=FALSE, warning=FALSE,  fig.margin = TRUE, echo=FALSE, fig.width= 4, fig.height=2.5}
+p3 <- ggplot(bootstrapped, aes(x = pred_n_hispanic_total)) +
+  geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
+  ggtitle("Expected number of hispanic coaches") +
+  xlab("Number of hispanic coaches") +
+  ylab("Probability mass") +
+  geom_vline(xintercept = smry$n_hispanic_total, linetype = "dashed") +
+  geom_vline(xintercept = smry$pred_n_hispanic_total, linetype = "solid") +
+  scale_y_continuous(labels = NULL)
+```
+
+```{r Figure10, fig.margin=TRUE, fig.show='hold', fig.cap="Three plots showing the Boostrapped sample distribution and significance of sample estimates", fig.width=3.5, fig.height=2.5, echo=FALSE, cache=FALSE, message=FALSE, warning=FALSE}
+p1
+p2
+p3
+```
+
+The hypothesis that the number of white coaches is greater than expected was tested by assessing the bootstrap samples. Specifically, the recalculated expected number of white coaches in these samples was checked to see if it was consistently less than the actual number. Conversely, for Black and Hispanic coaches, the evaluation focused on whether these groups are underrepresented by checking if the expected numbers in the samples frequently exceeded the actual counts.
+
+The analysis led to the rejection of the null hypothesis, revealing a significant disparity in coaching opportunities. As illustrated in *Figure 11*, there is a significantly higher number of white coaches than expected and notably fewer Black coaches. These findings highlight the racial imbalances in NFL coaching hires and suggest a need for further investigation and potential adjustments to the hiring processes.
+
+In terms of actual numbers, there were 65 white coaches, 31 Black coaches, and 1 Hispanic coach. Simulations showed that the probability of observing at least 65 white coaches was only 0.17%—well below the 5% significance threshold—with a 95% confidence interval of (41.2, 60.2) that does not include the observed count. Similarly, the likelihood of having at most 31 Black coaches was 0.7%, with a confidence interval of (33.8, 52.6) also excluding the observed number. However, the probability of observing as few as one Hispanic coach was 35.8%, and the corresponding confidence interval of (-0.1, 6.5) includes the actual count, indicating no significant bias against Hispanic coaches. This analysis underscores a significant racial bias favoring white coaches over Black coaches, although no significant disparities were observed for Hispanic coaches, likely due to their smaller representation.
+
+# Discussion
+
+In the ever-evolving landscape of American sports, few institutions hold as much cultural significance as the National Football League (NFL). Yet, beneath the surface of this revered institution lies a persistent and troubling issue—one of racial bias and systemic inequity in the hiring of coaches. Exploring the intricacies of these practices reveals deep-seated biases that continue to influence outcomes in ways that often go unnoticed.
+
+This investigation into racial equity in NFL coaching hires challenges conventional wisdom and uncovers not just the underrepresentation of minority coaches, but also the subtle, yet powerful, institutional mechanisms that have entrenched these disparities. It aligns with a growing body of academic work that calls for a reimagining of discrimination—not as a series of isolated incidents, but as a complex interplay of systemic forces that shape careers and lives in profound ways (Bohren, Hull, & Imas, 2023).
+
+As we delve into the data, patterns begin to emerge that tell a more complex narrative than simple statistics might suggest. The analysis reveals that while career longevity and performance metrics are often touted as indicators of coaching potential, these metrics alone cannot account for the disparities observed. Beneath the surface, implicit biases are at work—biases that subtly disadvantage minority candidates, steering them away from opportunities that should be within their grasp.
+
+Consider the hypothesis that a long and storied playing career in the NFL would naturally translate into coaching success. At first glance, it seems a reasonable assumption. Yet, the data reveals a different reality. Longer playing careers, as it turns out, may actually correlate with lower scores on the coaching potential metric. This unexpected finding suggests that players who have spent years honing their skills on the field might struggle to adapt to the strategic and managerial demands of coaching. The game has evolved, and those deeply entrenched in older styles of play may find themselves ill-equipped to navigate the complexities of modern football.
+
+However, the issue doesn’t stop there. To truly grasp the nuances of these biases, we must look beyond the numbers and consider the broader context. The Rooney Rule, introduced in 2003 as a well-intentioned effort to address the glaring lack of minority coaches, serves as a case in point. While it marked a step in the right direction, the rule has not delivered the transformative change many had hoped for. The reason, as sociologists Mario Small and Devah Pager have pointed out, lies in the limitations of such institutional policies. Rules like the Rooney Rule often fall short because they fail to disrupt the deeply rooted biases that continue to shape decision-making processes (Small & Pager, 2020).
+
+To unravel these biases, psychological theories such as social identity theory and implicit bias offer valuable insights. Social identity theory suggests that people naturally gravitate towards those who are like them, favoring candidates who share similar backgrounds and characteristics (Tajfel & Turner, 1979). In the NFL, this could explain why the predominantly white leadership might be more inclined to hire coaches who resemble them, perpetuating a cycle of homogeneity. Meanwhile, implicit biases—those unconscious attitudes that subtly influence decisions—play a significant role in shaping perceptions of who is deemed competent and fit for leadership.
+
+As we continue to peel back the layers of this complex issue, another surprising twist emerges. Metrics that might seem tangential to coaching success, such as a player’s experience with losses and ties, prove to be unexpectedly strong predictors of coaching potential. The data shows that players who have endured the challenges of frequent losses or ties often develop a resilience and adaptability that serve them well in coaching roles. These findings, detailed in *Figure 9* and *Table 2*, suggest that the ability to navigate adversity is a crucial skill for those who aspire to lead teams.
+
+The intersection of race and performance metrics adds yet another dimension to this discussion. While career achievements are often seen as objective indicators of potential, the reality is more complicated. The study echoes the work of scholars like Claudia Goldin, who have shown that performance evaluations are often skewed by biases related to race and gender (Goldin, 2014). A Black coach with comparable or even superior metrics to a white counterpart may still find himself overlooked, not because of his abilities, but because of the pervasive stereotypes that question his leadership potential.
+
+The concept of "statistical discrimination," introduced by economists like Edmund Phelps and Kenneth Arrow, offers a lens through which to view these hiring practices. This form of discrimination occurs when decision-makers rely on group-level statistics to make assumptions about individuals, leading to biased outcomes even in the absence of explicit prejudice (Phelps, 1972; Arrow, 1973). In the NFL, this might mean that Black coaches are unfairly judged based on historical patterns rather than their actual qualifications and performance.
+
+The third hypothesis, which explores racial disparities in the hiring of NFL coaches, uncovers significant biases that further complicate this narrative. Despite the challenges of accurately predicting racial identity from names, the analysis reveals a stark underrepresentation of Black coaches and an overrepresentation of white coaches. These disparities, vividly illustrated in *Figures 10* and *11*, highlight the systemic biases that continue to skew opportunities away from Black candidates.
+
+This issue extends beyond the confines of the NFL. It touches on broader societal concerns, including the persistent racial disparities that plague other domains, such as the labor market. Studies have shown that similar biases exist in hiring practices across various industries, where racial discrimination continues to limit opportunities for minority candidates (Bertrand & Mullainathan, 2004). The findings of this study, much like those in other fields, underscore the systemic nature of discrimination and the need for interventions that address these issues at their root.
+
+As we conclude this exploration, it becomes clear that the discussion of racial equity in NFL coaching hires cannot be viewed in isolation. It must be situated within a larger framework of systemic discrimination and implicit bias. The study's findings highlight the limitations of policies like the Rooney Rule, which, while well-intentioned, fall short of addressing the deeper issues at play. To achieve true equity, we must embrace a more comprehensive approach—one that draws on insights from psychology, sociology, and economics to address the complex interplay of factors that perpetuate racial disparities.
+
+Though rooted in the specific context of NFL coaching hires, this analysis offers broader lessons. It calls for a rethinking of how equity and justice are approached, not just in sports, but across all areas of society. By understanding the systemic forces at work and the biases that shape outcomes, we can begin to dismantle the barriers that prevent true equity from being realized. The path forward is not an easy one, but it is a journey that we must undertake if we are to build a more just and equitable world.
+
+# Reference
+
+-   Allaire, J.J., Xie, Y., Dervieux, C., McPherson, J., Luraschi, J., Ushey, K., Atkins, A., Wickham, H., Cheng, J., & Chang, W. (2024). rmarkdown: Dynamic Documents for R. R package version 2.26, Available at <https://github.com/rstudio/rmarkdown>.
+
+-   Arrow, K. J. (1973). The Theory of Discrimination. In O. Ashenfelter & A. Rees (Eds.), *Discrimination in Labor Markets*. Princeton University Press.
+
+-   Babb, K. & Boren, C. (2022). The NFL's persistent problem with hiring Black coaches. The Washington Post. Available at <https://www.washingtonpost.com/sports/interactive/2022/nfl-black-head-coaches/>.
+
+-   Beamon, K. (2022). NFL's lack of Black coaches is a failure of its 'Rooney Rule'. USA Today. Available at <https://www.usatoday.com/story/opinion/2022/10/14/nfl-coaches-report-shows-football-league-diversity-problem/10484940002/>.
+
+-   Bertrand, M., & Mullainathan, S. (2004). Are Emily and Greg More Employable Than Lakisha and Jamal? A Field Experiment on Labor Market Discrimination. *American Economic Review*, *94*(4), 991-1013.
+
+-   Football Players Health Study at Harvard. (2023). Examining race trends in the NFL: Diversity but not inclusion. Available at <https://footballplayershealth.harvard.edu/about/news/examining-race-trends-in-the-nfl-diversity-but-not-inclusion/>.
+
+-   Goldin, C. (2014). *The Race between Education and Technology*. Harvard University Press.
+
+-   Greenwald, A. G., & Banaji, M. R. (1995). Implicit Social Cognition: Attitudes, Self-Esteem, and Stereotypes. *Psychological Review*, *102*(1), 4-27.
+
+-   NFL Operations. (2024). The Rooney Rule. Available at <https://operations.nfl.com/inside-football-ops/inclusion/the-rooney-rule/>.
+
+-   Our Black Experience. (2021). First Black Players in the NFL. Available at <https://www.ourblackexperience.com/first-black-players-in-the-nfl>.
+
+-   Phelps, E. S. (1972). The Statistical Theory of Racism and Sexism. *American Economic Review*, *62*(4), 659-661.
+
+-   Positive Coaching Alliance. (2024). About PCA. Available at <https://positivecoach.org/equity-access/>.
+
+-   Pro Football Reference. (2024). Pro Football Statistics and History. Available at <https://www.pro-football-reference.com/>.
+
+-   R Core Team. (2024). R: A Language and Environment for Statistical Computing. Vienna, Austria: R Foundation for Statistical Computing. Available at <https://www.R-project.org/>.
+
+-   Small, M. L., & Pager, D. (2020). Sociological Perspectives on Racial Disparities in Employment. *Annual Review of Sociology*, *46*, 21-42.
+
+-   Tajfel, H., & Turner, J. C. (1979). An Integrative Theory of Intergroup Conflict. In W. G. Austin & S. Worchel (Eds.), *The Social Psychology of Intergroup Relations*. Brooks/Cole.
+
+-   Thoutt, Z. (2017). NFL Player Stats. Available at <https://www.kaggle.com/datasets/zynicide/nfl-football-player-stats>.
+
+-   Xie, Y., Allaire, J.J., & Grolemund, G. (2018). R Markdown: The Definitive Guide. Boca Raton, Florida: Chapman and Hall/CRC. ISBN 9781138359338. Available at <https://bookdown.org/yihui/rmarkdown>.
+
+-   Xie, Y., Dervieux, C., & Riederer, E. (2020). R Markdown Cookbook. Boca Raton, Florida: Chapman and Hall/CRC. ISBN 9780367563837. Available at <https://bookdown.org/yihui/rmarkdown-cookbook>.
+
+# Appendix
+
+```{r appendix-fsm1-smry, cache=TRUE, message=FALSE, warning=FALSE }
+print(summary(forward_selected_model))
+```
